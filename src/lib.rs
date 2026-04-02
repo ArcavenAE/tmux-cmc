@@ -37,7 +37,9 @@ pub(crate) mod writer;
 pub mod client;
 pub mod error;
 
-pub use client::{Client, ConnectOptions, NewSessionOptions, NewWindowOptions, OptionTarget, SplitPaneOptions};
+pub use client::{
+    Client, ConnectOptions, NewSessionOptions, NewWindowOptions, OptionTarget, SplitPaneOptions,
+};
 pub use error::TmuxError;
 pub use ids::{PaneId, SessionId, WindowId};
 pub use notification::Notification;

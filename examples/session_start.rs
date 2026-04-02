@@ -43,9 +43,7 @@ fn main() -> tmux_cmc::Result<()> {
     client.set_status_right(&session, " connected ")?;
 
     println!("Statusline configured.");
-    println!(
-        "Attach with: tmux -L example attach-session -t {session_name}"
-    );
+    println!("Attach with: tmux -L example attach-session -t {session_name}");
 
     Ok(())
 }

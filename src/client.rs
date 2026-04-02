@@ -53,9 +53,8 @@ impl Client {
         let id_str = resp
             .first_line()
             .ok_or_else(|| TmuxError::UnexpectedResponse("empty new-session output".into()))?;
-        SessionId::new(id_str.trim()).map_err(|_| {
-            TmuxError::UnexpectedResponse(format!("invalid session id: {id_str}"))
-        })
+        SessionId::new(id_str.trim())
+            .map_err(|_| TmuxError::UnexpectedResponse(format!("invalid session id: {id_str}")))
     }
 
     /// Kill (destroy) a session.
@@ -72,9 +71,8 @@ impl Client {
         let id_str = resp
             .first_line()
             .ok_or_else(|| TmuxError::UnexpectedResponse("empty new-window output".into()))?;
-        WindowId::new(id_str.trim()).map_err(|_| {
-            TmuxError::UnexpectedResponse(format!("invalid window id: {id_str}"))
-        })
+        WindowId::new(id_str.trim())
+            .map_err(|_| TmuxError::UnexpectedResponse(format!("invalid window id: {id_str}")))
     }
 
     // ── Pane ──────────────────────────────────────────────────────────────────
@@ -125,7 +123,11 @@ impl Client {
 
     /// Set the left statusline for a session.
     pub fn set_status_left(&self, session: &SessionId, content: &str) -> Result<()> {
-        self.set_option(&OptionTarget::Session(session.clone()), "status-left", content)
+        self.set_option(
+            &OptionTarget::Session(session.clone()),
+            "status-left",
+            content,
+        )
     }
 
     /// Set the right statusline for a session.

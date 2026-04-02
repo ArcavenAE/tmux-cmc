@@ -1,7 +1,7 @@
 use std::io::{BufRead, BufReader};
 use std::process::ChildStdout;
-use std::sync::{Arc, Condvar, Mutex};
 use std::sync::mpsc;
+use std::sync::{Arc, Condvar, Mutex};
 
 use crate::notification::Notification;
 use crate::protocol::{Line, parse_line};

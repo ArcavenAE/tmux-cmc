@@ -129,7 +129,11 @@ pub fn send_keys(pane: &PaneId, keys: &str, literal: bool) -> String {
 pub fn set_option(target: &OptionTarget, name: &str, value: &str) -> String {
     match target {
         OptionTarget::Global => {
-            format!("set-option -g {} {}", shell_escape(name), shell_escape(value))
+            format!(
+                "set-option -g {} {}",
+                shell_escape(name),
+                shell_escape(value)
+            )
         }
         OptionTarget::Session(id) => {
             format!(
@@ -181,4 +185,3 @@ pub fn shell_escape(s: &str) -> String {
     // Single-quote the string, escaping internal single quotes as '\''
     format!("'{}'", s.replace('\'', r"'\''"))
 }
-

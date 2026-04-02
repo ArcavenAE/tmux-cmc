@@ -112,12 +112,10 @@ impl Connection {
             .send(PendingCommand { text: text.clone() })
             .map_err(|_| TmuxError::Disconnected)?;
 
-        let response = rx
-            .recv_timeout(self.response_timeout)
-            .map_err(|_e| {
-                // Could be timeout or disconnect — check if queue was drained
-                TmuxError::ResponseTimeout { serial }
-            })?;
+        let response = rx.recv_timeout(self.response_timeout).map_err(|_e| {
+            // Could be timeout or disconnect — check if queue was drained
+            TmuxError::ResponseTimeout { serial }
+        })?;
 
         if response.is_error {
             Err(TmuxError::CommandError {
