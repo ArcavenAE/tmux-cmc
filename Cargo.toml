@@ -1,0 +1,29 @@
+[package]
+name = "tmux-cmc"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+description = "tmux control mode client — bidirectional programmatic tmux control"
+repository = "https://github.com/ArcavenAE/tmux-cmc"
+keywords = ["tmux", "control-mode", "terminal", "multiplexer", "automation"]
+categories = ["command-line-utilities", "os"]
+
+[dependencies]
+thiserror = "2"
+oneshot = "0.1"
+
+[dev-dependencies]
+tempfile = "3"
+
+[features]
+default = []
+
+[lints.clippy]
+cloned_instead_of_copied = "warn"
+needless_pass_by_value = "warn"
+redundant_closure_for_method_calls = "warn"
+uninlined_format_args = "deny"
+
+[lints.rust]
+unsafe_code = "forbid"
