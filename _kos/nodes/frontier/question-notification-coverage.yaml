@@ -1,45 +1,49 @@
 id: question-notification-coverage
 type: question
 confidence: frontier
-title: "Are all notification types handled? What's missing?"
+title: "Which unhandled notification types matter to actual consumers?"
 content: |
-  The Notification enum has variants for the most common notification
-  types plus an Unhandled catch-all. tmux's control mode protocol
-  emits more notification types than the current implementation handles:
+  tmux-cmc handles 7 notification types; tmux emits 14+ more, all caught
+  by Notification::Unhandled { raw }. No data is lost, but structured
+  access requires parsing raw strings.
 
-  Currently handled:
-  - %output %pane data
-  - %pane-exited %pane exit_code
-  - %session-changed $session name
-  - %window-add @window
-  - %window-close @window
-  - %sessions-changed
-  - %exit
+  Key constraint: aclaude's primary consumer runs Claude Code inside the
+  pane. Claude Code owns the terminal rendering — aclaude does NOT read
+  pane output (%output) and does NOT need most lifecycle notifications
+  because the pane's content is not aclaude's concern.
 
-  Not yet handled (tmux emits these):
-  - %client-detached name
-  - %client-session-changed name session
-  - %layout-change @window layout flags
-  - %pane-mode-changed %pane
-  - %pause %pane
-  - %session-created $session
-  - %session-closed $session
-  - %session-window-changed $session @window
-  - %window-renamed @window name
-  - %unlinked-window-add @window
-  - %unlinked-window-close @window
+  What aclaude actually uses from the notification stream:
+  - PaneExited: potentially (see question-aclaude-pane-lifecycle)
+  - Everything else: not needed for the current use case
 
-  All unhandled types fall through to Notification::Unhandled { raw }.
-  No data is lost, but structured access requires parsing raw strings.
+  Unhandled types that might matter if the consumer set grows:
+  - %session-created, %session-closed: useful if a future consumer tracks
+    session lifecycle without creating the sessions itself
+  - %window-renamed: display purposes
+  - %layout-change: if a future consumer reacts to pane size changes
+  - %client-detached: if aclaude wants to know when a user detaches
 
-  Questions:
-  - Which unhandled notifications does aclaude need? (pane lifecycle
-    for session health, window rename for display?)
-  - Should coverage be driven by consumer needs or be exhaustive?
-  - The enum is `#[non_exhaustive]` — adding variants is non-breaking
-    for library consumers but requires all match arms to re-add handling.
+  Unhandled types that are unlikely to matter:
+  - %pane-mode-changed, %pause: internal tmux state, not consumer-relevant
+  - %client-session-changed, %session-window-changed: internal routing
+  - %unlinked-window-*: edge cases in multi-session setups
+
+  The enum is #[non_exhaustive] — adding variants is additive and non-breaking.
+  Coverage should be driven by concrete consumer needs, not exhaustiveness.
+
+  Probe question: before adding any notification variant, identify which
+  consumer needs it and why. "It exists in the protocol" is not sufficient
+  justification for structured handling.
+
+edges:
+  - target: probe-consumer-tmux-strategy
+    type: in-scope-of
+  - target: question-aclaude-pane-lifecycle
+    type: related
 
 provenance:
   created_by: human+claude
   session: session-009
   created_at: "2026-04-02"
+  updated_at: "2026-04-02"
+  updated_by: "refined: aclaude runs Claude Code, pane output not needed"

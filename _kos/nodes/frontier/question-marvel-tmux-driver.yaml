@@ -1,43 +1,52 @@
 id: question-marvel-tmux-driver
 type: question
 confidence: frontier
-title: "Does marvel need tmux-cmc, or does Go keep its own tmux driver?"
+title: "Is marvel's subprocess tmux driver sufficient, or does Go need a control mode client?"
 content: |
-  marvel (Go) has its own tmux driver in `internal/tmux/` that shells
-  out to the tmux CLI. This works but has the same per-command subprocess
-  overhead that motivated building tmux-cmc.
+  marvel (Go) manages agent sessions via tmux. Its current driver in
+  internal/tmux/ shells out to the tmux CLI — one subprocess per command.
+  tmux-cmc is Rust-only and is not applicable here.
 
-  Three options:
-  1. **Go FFI to tmux-cmc** — call the Rust crate from Go via cgo.
-     Preserves a single implementation. Adds a C ABI boundary and
-     build-time dependency on the Rust toolchain in Go CI.
-  2. **Port tmux-cmc to Go** — reimplement the control mode protocol
-     in Go, separate crate/package, same design. Duplication but no
-     FFI boundary. This is the "a little copying is better than a
-     little dependency" path.
-  3. **Keep Go's subprocess driver** — marvel's requirements may not
-     need the real-time notification stream or zero-subprocess-overhead
-     that tmux-cmc provides. The Go driver is already working. If
-     it ain't broke, don't fix it.
+  The question is whether the subprocess driver is adequate for marvel's
+  actual fleet management requirements, or whether a Go control mode
+  client is worth building or adopting.
 
-  The case for keeping separate implementations: tmux-cmc was built
-  because aclaude is Rust and needs the statusline push. marvel's
-  tmux interactions are mostly create/list/kill sessions — not a
-  high-frequency path. A Go port is only worth doing if marvel needs
-  the notification stream for pane lifecycle events.
+  The case for keeping the subprocess driver:
+  - Session starts/stops are infrequent operations. Even at 50 agents,
+    the frequency of tmux commands doesn't stress the per-process model.
+  - Agent communication (task routing) goes via director protocol (FIFO,
+    named pipes) — not high-frequency tmux send-keys.
+  - Pane exit detection: `tmux list-panes -F '#{pane_dead}'` polled at
+    2-5s is adequate for restart policy. Sub-second detection is not
+    required for the health check use case.
 
-  Questions:
-  - Does marvel need real-time pane exit notifications
-    (Notification::PaneExited) for session health tracking?
-  - Is the existing Go subprocess overhead measurable in practice?
-  - Is there a simpler Go tmux control mode client to depend on vs
-    building one?
+  The case for a Go control mode client:
+  - Real-time PaneExited notification (no polling lag)
+  - Reduces tmux subprocess spawn overhead at scale
+  - Enables streaming %output capture without polling capture-pane
+  - Only matters if fleet grows to 100+ agents or restart policy SLA is tight
+
+  A Go control mode client would be a separate project, not an extension
+  of tmux-cmc. Existing Go tmux libraries (if any) should be evaluated
+  before building.
+
+  Note: Go FFI to tmux-cmc (cgo) is explicitly ruled out — the build
+  complexity and C ABI boundary are not worth it when the use case can
+  be served by a pure Go implementation or the existing subprocess driver.
 
 edges:
   - target: elem-sync-architecture
     type: related
+    note: "tmux-cmc is Rust; marvel is Go. This is a separate question."
+  - target: probe-consumer-tmux-strategy
+    type: in-scope-of
+
+graveyard_candidates:
+  - Go FFI to tmux-cmc via cgo — ruled out (build complexity, C ABI)
 
 provenance:
   created_by: human+claude
   session: session-009
   created_at: "2026-04-02"
+  updated_at: "2026-04-02"
+  updated_by: "refined: FFI ruled out, question reframed as subprocess vs Go client"

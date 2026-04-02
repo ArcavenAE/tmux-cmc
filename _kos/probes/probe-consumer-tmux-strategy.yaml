@@ -1,0 +1,113 @@
+id: probe-consumer-tmux-strategy
+type: probe
+title: "Consumer tmux integration strategy — who uses what, and is it sufficient?"
+status: open
+created_at: "2026-04-02"
+
+question: |
+  Each platform component that interacts with tmux has different needs,
+  different languages, and a different relationship to tmux sessions.
+  tmux-cmc (Rust, control mode client) exists and is used by aclaude.
+  Is it the right tool for each consumer, or are there cases where
+  a different strategy is correct?
+
+  The probe answers three sub-questions per consumer:
+  1. What does this component actually need from tmux?
+  2. What integration strategy is correct (tmux-cmc, own driver, not applicable)?
+  3. Is that strategy adequately covered today, or are there specific gaps?
+
+consumers:
+  aclaude:
+    language: Rust
+    relationship_to_tmux: |
+      Session client. aclaude creates and manages the session that runs
+      the `claude` CLI subprocess. It does NOT own the pane rendering —
+      Claude Code owns the terminal surface inside the pane (TUI, input
+      box, output). aclaude's tmux surface is:
+        - Session setup (create, configure, launch)
+        - Status bar (set-option status-left/right in real-time)
+        - Session teardown (kill or detach)
+        - Pane exit detection (did `claude` die?)
+    strategy: tmux-cmc
+    questions:
+      - Does PaneExited notification reliably fire when `claude` exits?
+        (tmux-cmc delivers it but integration test coverage is thin)
+      - Does aclaude need to react to PaneExited at all, or does the
+        user handle session cleanup manually?
+      - Is there any case where aclaude needs to read pane output?
+        (No — Claude Code renders the pane. This is NOT needed.)
+
+  marvel:
+    language: Go
+    relationship_to_tmux: |
+      Fleet manager. marvel creates and manages many sessions across
+      the tmux substrate. Each session runs a BYOA console (aclaude,
+      zclaude, or bare `claude`). marvel's tmux surface is:
+        - Session/pane lifecycle (create, list, kill, restart)
+        - Health monitoring (is the process alive?)
+        - Task routing (send input to agent panes for communication)
+      marvel does NOT render anything in tmux — agents own their panes.
+    strategy: |
+      Go, so tmux-cmc is not available. Two options:
+        1. Existing subprocess-per-command driver in internal/tmux/
+           Works today. Overhead: one tmux process per command.
+        2. Go tmux control mode client (separate project or library)
+           Needed if: real-time PaneExited is required for restart
+           policy, OR if fleet scale makes per-command overhead measurable.
+      Hypothesis: at realistic fleet sizes (10-50 agents), per-command
+      subprocess overhead is not measurable. The subprocess driver is
+      probably sufficient. If pane exit detection is needed, `tmux wait-for`
+      or periodic `list-panes` may be adequate without a control mode client.
+    questions:
+      - Does marvel's restart policy require real-time pane exit notification,
+        or is polling list-panes on a 2-5s interval sufficient?
+      - Is there an existing Go tmux control mode library worth evaluating
+        before building one?
+      - What's the actual frequency of tmux commands in a running fleet?
+        (Estimate: session starts/stops are infrequent. Only task routing
+        via send-keys is potentially high-frequency, but director protocol
+        via FIFO is the preferred path for that.)
+
+  switchboard:
+    language: Go
+    relationship_to_tmux: |
+      Relay server. switchboard provides remote access to tmux sessions —
+      it is not a session client, it is a network bridge. It attaches to
+      existing tmux sessions (including marvel-managed ones) and relays
+      them over its own protocol. Its relationship to tmux is:
+        - Attach to an existing session (tmux -CC attach-session)
+        - Relay stdin/stdout over the network
+        - Detach when the remote connection drops
+      switchboard is NOT a fleet manager and does NOT create sessions.
+    strategy: not-applicable
+    notes: |
+      switchboard doesn't need tmux-cmc or a control mode client library.
+      It attaches to tmux directly, the same way a human operator would.
+      The control mode protocol it speaks is internal to the tmux -CC
+      attach, not something switchboard needs to parse programmatically.
+
+hypotheses:
+  - id: H1
+    statement: |
+      aclaude's current use of tmux-cmc covers its actual needs. The main
+      gap is reliable PaneExited integration test coverage, not missing API.
+
+  - id: H2
+    statement: |
+      marvel's subprocess tmux driver is sufficient for fleet management at
+      realistic scale. A Go control mode client is not needed unless:
+      (a) restart policy requires sub-second pane exit detection, OR
+      (b) fleet size exceeds ~100 agents where per-command overhead compounds.
+
+  - id: H3
+    statement: |
+      tmux-cmc's development roadmap should be driven by aclaude's actual
+      requirements (verified by integration tests), not by speculative
+      requirements from Go consumers who won't use it.
+
+success_signal: |
+  A consumer matrix (consumer × capability × strategy × gap) exists as a
+  finding node, with each gap either confirmed necessary and filed as a
+  frontier question, or confirmed unnecessary and moved to graveyard.
+
+timebox: one session
