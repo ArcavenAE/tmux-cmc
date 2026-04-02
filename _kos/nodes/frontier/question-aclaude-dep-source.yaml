@@ -1,0 +1,29 @@
+id: question-aclaude-dep-source
+type: question
+confidence: frontier
+title: "Migrate aclaude dependency from path to git/crates.io"
+content: |
+  aclaude currently depends on tmux-cmc via `path = "../tmux-cmc"`.
+  This works for the main checkout and worktrees (clone-for-worktree)
+  but creates a hard coupling: you must have both repos cloned at the
+  same relative path.
+
+  Three options:
+  1. `{ git = "...", tag = "v0.1.0" }` — pinned git tag, no crates.io
+     publish required, but cargo.lock must be committed
+  2. `{ version = "0.1" }` — crates.io (requires publish)
+  3. Keep path for now — acceptable during co-development, switch after
+     tmux-cmc stabilises its API
+
+  The worktree clone pattern (`just clone-for-worktree tmux-cmc`) handles
+  the path case. This question becomes pressing when aclaude wants to
+  distribute without requiring tmux-cmc to be cloned alongside it.
+
+edges:
+  - target: question-crates-publish
+    type: depends-on
+
+provenance:
+  created_by: human+claude
+  session: session-009
+  created_at: "2026-04-02"

@@ -1,0 +1,33 @@
+id: question-integration-tests
+type: question
+confidence: frontier
+title: "Integration test coverage against a live tmux"
+content: |
+  Unit tests cover the protocol parser (15 tests, no tmux required).
+  Integration tests are marked `#[ignore]` and require a live tmux
+  session — they're there but thin.
+
+  What's needed for confident crate operation:
+  - Test every public Client method against a real tmux subprocess
+  - Test graceful handling of tmux subprocess death mid-command
+  - Test notification delivery timing (does %output arrive before
+    or after the command %end in practice?)
+  - Test concurrent send_command() calls from multiple threads
+  - Test reconnect behaviour (is reconnect in scope? currently not)
+  - Test handshake timeout (hard to test without mocking the subprocess)
+
+  CI constraint: integration tests require tmux installed on the
+  runner. GitHub-hosted ubuntu-latest has tmux available. macOS
+  runners also have it. This is solvable.
+
+  Questions:
+  - Should integration tests run in CI on every PR, or only on release?
+  - Is a mock tmux subprocess (a small Rust binary that speaks the
+    wire protocol) worth building for deterministic testing?
+  - What's the minimum test coverage before declaring the crate
+    production-ready for aclaude?
+
+provenance:
+  created_by: human+claude
+  session: session-009
+  created_at: "2026-04-02"

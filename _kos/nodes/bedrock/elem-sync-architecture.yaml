@@ -1,0 +1,29 @@
+id: elem-sync-architecture
+type: element
+confidence: bedrock
+title: "Sync threading model — no tokio, no async runtime"
+content: |
+  The crate is intentionally synchronous. No tokio, no async/await.
+  Architecture: writer thread (mpsc → tmux stdin) + reader thread
+  (stdout → PendingQueue + notification broadcast) + caller threads
+  that block on `oneshot::Receiver::recv_timeout()`.
+
+  `Client` is `Clone` via `Arc<Connection>`. Share freely across threads.
+  Notification subscription: `client.notifications()` returns a
+  `std::sync::mpsc::Receiver<Notification>`.
+
+  Decision rationale: aclaude is entirely synchronous. Adding an async
+  runtime for a single I/O surface is unnecessary complexity. An `async`
+  feature flag (tokio wrapper around the sync API) is deferred post-MVP.
+
+edges:
+  - target: question-async-feature
+    type: leaves-open
+
+evidence:
+  - "885f99b — initial implementation"
+
+provenance:
+  created_by: human+claude
+  session: session-009
+  created_at: "2026-04-02"

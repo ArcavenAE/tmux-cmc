@@ -1,0 +1,35 @@
+id: question-async-feature
+type: question
+confidence: frontier
+title: "async feature flag — tokio wrapper for async consumers"
+content: |
+  The crate is synchronous. An `async` feature flag that wraps the sync
+  API in tokio was deferred post-MVP (ADR deferred, noted in CLAUDE.md).
+
+  Design sketch: `async fn connect(opts: &ConnectOptions) -> Result<Client>`
+  wraps `tokio::task::spawn_blocking`. The underlying threads remain; only
+  the caller API surface changes. Notifications become `tokio::sync::mpsc`.
+
+  When does this matter?
+  - marvel's Go tmux driver is separate (no tokio needed there)
+  - If a future Rust consumer (e.g. a tokio-based marvel plugin or
+    a tokio-native aclaude TUI) needs async tmux operations
+  - For `async` ecosystem crates that expect `Send + Sync + async` APIs
+
+  Questions:
+  - Who is the first async consumer? Without a concrete use case,
+    this stays deferred.
+  - Should the feature flag keep the sync API as the primary and
+    `async` as additive, or should async become the primary at some
+    version boundary?
+  - Does the notification broadcast design (Vec<Sender<Notification>>
+    behind a Mutex) need to change for tokio consumers?
+
+edges:
+  - target: elem-sync-architecture
+    type: extends
+
+provenance:
+  created_by: human+claude
+  session: session-009
+  created_at: "2026-04-02"

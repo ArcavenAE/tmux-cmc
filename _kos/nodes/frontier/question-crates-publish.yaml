@@ -1,0 +1,33 @@
+id: question-crates-publish
+type: question
+confidence: frontier
+title: "Publish tmux-cmc to crates.io and set up release CI"
+content: |
+  The crate is crates.io-ready (no path deps, MIT/Apache-2.0, README)
+  but not yet published. The main consumer (aclaude) uses a path
+  dependency pointing to the adjacent checkout.
+
+  Two gated steps before publish:
+  1. `cargo publish --dry-run` passes without warnings
+  2. CI release pipeline: tag → cargo publish via token in GitHub
+     Actions secret
+
+  After publish: aclaude's Cargo.toml should migrate from
+  `tmux-cmc = { path = "../tmux-cmc" }` to
+  `tmux-cmc = { git = "...", tag = "v0.1.0" }` (or crates.io version).
+
+  Questions:
+  - Which org account owns the crates.io publish token?
+  - Semver policy: 0.1.x for patch, 0.x.0 for breaking changes until 1.0?
+  - Does the async feature flag (question-async-feature) ship before or
+    after initial publish? If after, the 0.1.0 API should be considered
+    incomplete for async consumers.
+
+edges:
+  - target: question-aclaude-dep-source
+    type: blocks
+
+provenance:
+  created_by: human+claude
+  session: session-009
+  created_at: "2026-04-02"

@@ -1,0 +1,33 @@
+id: elem-wire-protocol
+type: element
+confidence: bedrock
+title: "tmux control mode wire protocol implementation"
+content: |
+  tmux control mode (`tmux -CC`) communicates over subprocess stdin/stdout:
+
+  Commands:  one tmux command per line on stdin
+  Responses: `%begin <ts> <serial> <flags>` … output lines … `%end <ts> <serial> <flags>`
+  Errors:    `%begin` … `%error <ts> <serial> <flags>`
+  Async:     notification lines arrive between response blocks
+             (`%output %1 data`, `%pane-exited %1 0`, etc.)
+  Serials:   monotonically increasing u64 counter, pipelined commands
+             matched to responses via serial number
+
+  Startup handshake: tmux emits `%begin 0 0 0` / `%end 0 0 0`.
+  Client blocks on a `Condvar` until the reader thread signals handshake
+  complete. Timeout → `TmuxError::HandshakeTimeout`.
+
+  Implemented in `src/protocol.rs` (`parse_line() → Line` enum),
+  with 15 unit tests covering every line variant.
+
+edges:
+  - target: elem-sync-architecture
+    type: supports
+
+evidence:
+  - "885f99b — initial implementation, 15 protocol unit tests"
+
+provenance:
+  created_by: human+claude
+  session: session-009
+  created_at: "2026-04-02"

@@ -1,0 +1,45 @@
+id: question-notification-coverage
+type: question
+confidence: frontier
+title: "Are all notification types handled? What's missing?"
+content: |
+  The Notification enum has variants for the most common notification
+  types plus an Unhandled catch-all. tmux's control mode protocol
+  emits more notification types than the current implementation handles:
+
+  Currently handled:
+  - %output %pane data
+  - %pane-exited %pane exit_code
+  - %session-changed $session name
+  - %window-add @window
+  - %window-close @window
+  - %sessions-changed
+  - %exit
+
+  Not yet handled (tmux emits these):
+  - %client-detached name
+  - %client-session-changed name session
+  - %layout-change @window layout flags
+  - %pane-mode-changed %pane
+  - %pause %pane
+  - %session-created $session
+  - %session-closed $session
+  - %session-window-changed $session @window
+  - %window-renamed @window name
+  - %unlinked-window-add @window
+  - %unlinked-window-close @window
+
+  All unhandled types fall through to Notification::Unhandled { raw }.
+  No data is lost, but structured access requires parsing raw strings.
+
+  Questions:
+  - Which unhandled notifications does aclaude need? (pane lifecycle
+    for session health, window rename for display?)
+  - Should coverage be driven by consumer needs or be exhaustive?
+  - The enum is `#[non_exhaustive]` — adding variants is non-breaking
+    for library consumers but requires all match arms to re-add handling.
+
+provenance:
+  created_by: human+claude
+  session: session-009
+  created_at: "2026-04-02"
