@@ -14,6 +14,9 @@ pub enum TmuxError {
     #[error("control mode handshake timed out after {timeout:?}")]
     HandshakeTimeout { timeout: Duration },
 
+    #[error("tmux exited during startup: {stderr}")]
+    StartupFailed { stderr: String },
+
     #[error("tmux command error (serial {serial}): {message}")]
     CommandError { serial: u64, message: String },
 

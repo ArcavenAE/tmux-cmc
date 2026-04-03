@@ -20,12 +20,22 @@ pub struct RawNotification {
     pub rest: String,
 }
 
-/// Parse a single line from tmux control mode stdout.
+/// Parse a single line from tmux control mode output.
 ///
 /// This function is stateless — it does not track whether we are inside a
 /// `%begin`/`%end` block. The caller (reader thread) is responsible for
 /// accumulation.
+///
+/// When using a pty (required for tmux 3.5a+), the first line may be wrapped
+/// in a DCS (Device Control String) sequence: `\x1bP1000p%begin ...`. This
+/// prefix is stripped before parsing.
 pub fn parse_line(line: &str) -> Line {
+    // Strip DCS prefix if present. tmux wraps the initial control mode output
+    // in a DCS sequence: ESC P <params> <final-byte> <data>. The data starts
+    // after the final byte (a lowercase letter). We look for '%' inside the
+    // line and parse from there.
+    let line = strip_dcs_prefix(line);
+
     if let Some(rest) = line.strip_prefix('%') {
         // Split into keyword and remainder
         let (keyword, remainder) = rest.split_once(' ').unwrap_or((rest, ""));
@@ -68,6 +78,23 @@ pub fn parse_line(line: &str) -> Line {
     } else {
         Line::Output(line.to_owned())
     }
+}
+
+/// Strip a DCS (Device Control String) prefix from a line.
+///
+/// tmux 3.5a+ wraps the initial control mode output in a DCS sequence:
+/// `\x1bP1000p%begin ...`. This function strips the prefix so the parser
+/// sees a clean `%begin` line.
+///
+/// If no DCS prefix is found, returns the original line unchanged.
+fn strip_dcs_prefix(line: &str) -> &str {
+    // DCS starts with ESC P (0x1b 0x50). Look for '%' after the DCS header.
+    if line.starts_with('\x1b') {
+        if let Some(pos) = line.find('%') {
+            return &line[pos..];
+        }
+    }
+    line
 }
 
 /// Parse three space-separated integers from a string.
@@ -246,7 +273,7 @@ mod tests {
 
     #[test]
     fn begin_serial_zero_handshake() {
-        // tmux emits %begin 0 0 0 / %end 0 0 0 on startup
+        // tmux emits %begin 0 0 0 / %end 0 0 0 on startup (pre-3.5a)
         let begin = parse_line("%begin 0 0 0");
         let end = parse_line("%end 0 0 0");
         assert_eq!(
@@ -262,6 +289,34 @@ mod tests {
             Line::End {
                 ts: 0,
                 serial: 0,
+                flags: 0
+            }
+        );
+    }
+
+    #[test]
+    fn strips_dcs_prefix_from_begin() {
+        // tmux 3.5a+ wraps the initial line in a DCS sequence
+        let line = parse_line("\x1bP1000p%begin 1775252542 271 0");
+        assert_eq!(
+            line,
+            Line::Begin {
+                ts: 1775252542,
+                serial: 271,
+                flags: 0
+            }
+        );
+    }
+
+    #[test]
+    fn no_dcs_prefix_unchanged() {
+        // Normal line without DCS prefix
+        let line = parse_line("%end 1712000000 5 0");
+        assert_eq!(
+            line,
+            Line::End {
+                ts: 1712000000,
+                serial: 5,
                 flags: 0
             }
         );

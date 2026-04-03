@@ -1,13 +1,16 @@
-use std::io::ErrorKind;
+use std::fs::File;
+use std::io::Read;
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 use std::time::Duration;
 
+use rustix::pty::{OpenptFlags, grantpt, openpt, ptsname, unlockpt};
+
 use crate::error::{Result, TmuxError};
 use crate::notification::Notification;
 use crate::queue::{PendingCommand, PendingQueue};
-use crate::reader::{HandshakeSignal, run as reader_run};
+use crate::reader::{HandshakeSignal, HandshakeState, run as reader_run};
 use crate::response::Response;
 use crate::writer::run as writer_run;
 
@@ -27,6 +30,39 @@ pub struct Connection {
     response_timeout: Duration,
 }
 
+/// Create a pty pair and return (primary_file, stdin_stdio, stdout_stdio).
+///
+/// tmux in control mode requires a pty — it calls `tcgetattr` on stdin and
+/// writes control protocol output through the same pty rather than to a
+/// separate stdout pipe. Both stdin and stdout use the pty secondary;
+/// we read and write through the primary.
+fn create_pty_pair() -> std::result::Result<(File, Stdio, Stdio), std::io::Error> {
+    use std::ffi::OsStr;
+    use std::os::unix::ffi::OsStrExt;
+    use std::path::Path;
+
+    let primary = openpt(OpenptFlags::RDWR | OpenptFlags::NOCTTY).map_err(std::io::Error::from)?;
+    grantpt(&primary).map_err(std::io::Error::from)?;
+    unlockpt(&primary).map_err(std::io::Error::from)?;
+
+    let secondary_name = ptsname(&primary, Vec::new()).map_err(std::io::Error::from)?;
+    let secondary_path = Path::new(OsStr::from_bytes(secondary_name.as_bytes()));
+
+    // Open secondary twice — separate fds for stdin and stdout
+    let secondary_in = File::options()
+        .read(true)
+        .write(true)
+        .open(secondary_path)?;
+    let secondary_out = File::options()
+        .read(true)
+        .write(true)
+        .open(secondary_path)?;
+
+    let primary_file = File::from(primary);
+
+    Ok((primary_file, Stdio::from(secondary_in), Stdio::from(secondary_out)))
+}
+
 impl Connection {
     /// Spawn `tmux -L <socket> -CC` and wait for the startup handshake.
     pub fn spawn(socket_name: Option<&str>, handshake_timeout: Duration) -> Result<Arc<Self>> {
@@ -36,58 +72,91 @@ impl Connection {
             cmd.args(["-L", name]);
         }
 
-        // `-CC` enters control mode. `-x` would be exclusive.
+        // `-CC` enters control mode.
         // `new-session -A -s tmux-cmc` attaches if exists, creates otherwise.
         cmd.args(["-CC", "new-session", "-A", "-D", "-s", "tmux-cmc-ctrl"]);
 
-        cmd.stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null());
+        // Use a pty for both stdin and stdout — tmux calls tcgetattr on stdin
+        // and writes control protocol output through the same pty, not to a
+        // separate stdout pipe.
+        let (primary_file, stdin_stdio, stdout_stdio) = create_pty_pair()?;
+
+
+        cmd.stdin(stdin_stdio)
+            .stdout(stdout_stdio)
+            .stderr(Stdio::piped());
 
         let mut child = cmd.spawn().map_err(|e| {
-            if e.kind() == ErrorKind::NotFound {
+            if e.kind() == std::io::ErrorKind::NotFound {
                 TmuxError::TmuxNotFound
             } else {
                 TmuxError::Io(e)
             }
         })?;
 
-        let stdin = child.stdin.take().expect("stdin was piped");
-        let stdout = child.stdout.take().expect("stdout was piped");
+        let stderr_handle = child.stderr.take();
+
+        // Clone primary for reading — writer and reader share the same pty fd.
+        let primary_reader = primary_file
+            .try_clone()
+            .map_err(TmuxError::Io)?;
 
         let queue = Arc::new(PendingQueue::new());
         let notif_senders: Arc<Mutex<Vec<mpsc::Sender<Notification>>>> =
             Arc::new(Mutex::new(Vec::new()));
         let handshake = HandshakeSignal::new();
 
-        // Spawn writer thread
+        // Spawn writer thread — writes commands to the pty primary
         let (writer_tx, writer_rx) = mpsc::sync_channel::<PendingCommand>(64);
         {
             thread::Builder::new()
                 .name("tmux-cmc-writer".into())
-                .spawn(move || writer_run(writer_rx, stdin))
+                .spawn(move || writer_run(writer_rx, primary_file))
                 .map_err(TmuxError::Io)?;
         }
 
-        // Spawn reader thread
+        // Spawn reader thread — reads control protocol from the pty primary
         {
             let queue_clone = Arc::clone(&queue);
             let notif_clone = Arc::clone(&notif_senders);
             let handshake_clone = Arc::clone(&handshake);
             thread::Builder::new()
                 .name("tmux-cmc-reader".into())
-                .spawn(move || reader_run(stdout, queue_clone, notif_clone, handshake_clone))
+                .spawn(move || reader_run(primary_reader, queue_clone, notif_clone, handshake_clone))
                 .map_err(TmuxError::Io)?;
         }
 
         // Wait for handshake
-        {
-            let guard = handshake.ready.lock().expect("handshake lock poisoned");
-            let (guard, timed_out) = handshake
+        let state = {
+            let guard = handshake.state.lock().expect("handshake lock poisoned");
+            let (guard, _timed_out) = handshake
                 .cv
-                .wait_timeout_while(guard, handshake_timeout, |ready| !*ready)
+                .wait_timeout_while(guard, handshake_timeout, |s| {
+                    *s == HandshakeState::Waiting
+                })
                 .expect("handshake condvar poisoned");
-            if timed_out.timed_out() && !*guard {
+            *guard
+        };
+
+        match state {
+            HandshakeState::Ready => {}
+            HandshakeState::Failed => {
+                let stderr = stderr_handle
+                    .map(|mut h| {
+                        let mut buf = String::new();
+                        let _ = h.read_to_string(&mut buf);
+                        buf
+                    })
+                    .unwrap_or_default();
+                return Err(TmuxError::StartupFailed {
+                    stderr: if stderr.trim().is_empty() {
+                        "tmux exited immediately with no error output".into()
+                    } else {
+                        stderr.trim().to_string()
+                    },
+                });
+            }
+            HandshakeState::Waiting => {
                 return Err(TmuxError::HandshakeTimeout {
                     timeout: handshake_timeout,
                 });
@@ -113,7 +182,6 @@ impl Connection {
             .map_err(|_| TmuxError::Disconnected)?;
 
         let response = rx.recv_timeout(self.response_timeout).map_err(|_e| {
-            // Could be timeout or disconnect — check if queue was drained
             TmuxError::ResponseTimeout { serial }
         })?;
 

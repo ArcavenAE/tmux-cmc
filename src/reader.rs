@@ -1,5 +1,4 @@
-use std::io::{BufRead, BufReader};
-use std::process::ChildStdout;
+use std::io::{BufRead, BufReader, Read};
 use std::sync::mpsc;
 use std::sync::{Arc, Condvar, Mutex};
 
@@ -8,39 +7,57 @@ use crate::protocol::{Line, parse_line};
 use crate::queue::PendingQueue;
 use crate::response::Response;
 
-/// Signals that the initial handshake block has been received.
+/// State of the startup handshake.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HandshakeState {
+    /// Waiting for the initial `%begin 0 0 0` / `%end 0 0 0` block.
+    Waiting,
+    /// Handshake completed successfully.
+    Ready,
+    /// tmux exited before completing the handshake.
+    Failed,
+}
+
+/// Signals the outcome of the startup handshake to the spawning thread.
 pub struct HandshakeSignal {
-    pub ready: Mutex<bool>,
+    pub state: Mutex<HandshakeState>,
     pub cv: Condvar,
 }
 
 impl HandshakeSignal {
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
-            ready: Mutex::new(false),
+            state: Mutex::new(HandshakeState::Waiting),
             cv: Condvar::new(),
         })
     }
 
-    pub fn signal(&self) {
-        let mut guard = self.ready.lock().expect("handshake lock poisoned");
-        *guard = true;
+    pub fn signal_ready(&self) {
+        let mut guard = self.state.lock().expect("handshake lock poisoned");
+        *guard = HandshakeState::Ready;
+        self.cv.notify_all();
+    }
+
+    pub fn signal_failed(&self) {
+        let mut guard = self.state.lock().expect("handshake lock poisoned");
+        *guard = HandshakeState::Failed;
         self.cv.notify_all();
     }
 }
 
 /// Reader thread entry point.
 ///
-/// Reads lines from tmux stdout, demultiplexes response blocks and
-/// notifications, and dispatches them to the appropriate channels.
+/// Reads lines from the tmux control protocol stream (either a pty primary or
+/// a piped stdout), demultiplexes response blocks and notifications, and
+/// dispatches them to the appropriate channels.
 #[allow(clippy::needless_pass_by_value)]
 pub fn run(
-    stdout: ChildStdout,
+    source: impl Read,
     queue: Arc<PendingQueue>,
     notif_senders: Arc<Mutex<Vec<mpsc::Sender<Notification>>>>,
     handshake: Arc<HandshakeSignal>,
 ) {
-    let reader = BufReader::new(stdout);
+    let reader = BufReader::new(source);
 
     // State for the current in-flight response block
     let mut current_serial: Option<u64> = None;
@@ -52,7 +69,7 @@ pub fn run(
     for line_result in reader.lines() {
         let line = match line_result {
             Ok(l) => l,
-            Err(_) => break, // tmux exited or pipe broken
+            Err(_) => break, // tmux exited or pty closed
         };
 
         match parse_line(&line) {
@@ -65,10 +82,11 @@ pub fn run(
 
             Line::End { serial, .. } => {
                 if current_serial == Some(serial) {
-                    if serial == 0 && !handshake_done {
-                        // Startup handshake complete
+                    if !handshake_done {
+                        // First %begin/%end pair = startup handshake complete.
+                        // tmux 3.5a+ may use a non-zero serial for the initial block.
                         handshake_done = true;
-                        handshake.signal();
+                        handshake.signal_ready();
                     } else {
                         let response = Response {
                             serial,
@@ -116,9 +134,9 @@ pub fn run(
 
     // tmux exited — drain the queue so all waiting callers get Disconnected
     queue.drain();
-    // Signal handshake in case connect() is still waiting (tmux exited immediately)
+    // Signal failure if tmux exited before completing the handshake
     if !handshake_done {
-        handshake.signal();
+        handshake.signal_failed();
     }
 
     let _ = current_is_error; // suppress unused warning

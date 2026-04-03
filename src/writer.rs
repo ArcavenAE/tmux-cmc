@@ -1,5 +1,4 @@
 use std::io::{BufWriter, Write};
-use std::process::ChildStdin;
 use std::sync::mpsc;
 
 use crate::queue::PendingCommand;
@@ -8,8 +7,11 @@ use crate::queue::PendingCommand;
 ///
 /// Receives `PendingCommand` values from the command channel and writes them
 /// to tmux's stdin. Single-threaded to preserve command ordering.
-pub fn run(rx: mpsc::Receiver<PendingCommand>, stdin: ChildStdin) {
-    let mut writer = BufWriter::new(stdin);
+///
+/// Accepts any `Write` implementor — either a `ChildStdin` (pipe) or a `File`
+/// (pty primary).
+pub fn run(rx: mpsc::Receiver<PendingCommand>, writer: impl Write) {
+    let mut writer = BufWriter::new(writer);
     for cmd in rx {
         // Write the command text followed by a newline
         if writeln!(writer, "{}", cmd.text).is_err() {
