@@ -30,6 +30,10 @@ pub struct RawNotification {
 /// in a DCS (Device Control String) sequence: `\x1bP1000p%begin ...`. This
 /// prefix is stripped before parsing.
 pub fn parse_line(line: &str) -> Line {
+    // Strip trailing \r — pty raw mode disables OPOST, so tmux's \r\n line
+    // endings come through intact. BufReader::lines() strips \n but not \r.
+    let line = line.strip_suffix('\r').unwrap_or(line);
+
     // Strip DCS prefix if present. tmux wraps the initial control mode output
     // in a DCS sequence: ESC P <params> <final-byte> <data>. The data starts
     // after the final byte (a lowercase letter). We look for '%' inside the
@@ -317,6 +321,47 @@ mod tests {
             Line::End {
                 ts: 1712000000,
                 serial: 5,
+                flags: 0
+            }
+        );
+    }
+
+    #[test]
+    fn strips_trailing_cr() {
+        // Pty raw mode: \r\n comes through, lines() strips \n but not \r
+        let line = parse_line("%begin 1712000000 1 0\r");
+        assert_eq!(
+            line,
+            Line::Begin {
+                ts: 1712000000,
+                serial: 1,
+                flags: 0
+            }
+        );
+    }
+
+    #[test]
+    fn strips_cr_from_end_line() {
+        let line = parse_line("%end 1712000000 1 0\r");
+        assert_eq!(
+            line,
+            Line::End {
+                ts: 1712000000,
+                serial: 1,
+                flags: 0
+            }
+        );
+    }
+
+    #[test]
+    fn strips_cr_and_dcs_prefix() {
+        // Both DCS prefix and trailing \r
+        let line = parse_line("\x1bP1000p%begin 1775252542 271 0\r");
+        assert_eq!(
+            line,
+            Line::Begin {
+                ts: 1775252542,
+                serial: 271,
                 flags: 0
             }
         );
