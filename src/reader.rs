@@ -66,10 +66,23 @@ pub fn run(
     let mut accumulator: Vec<String> = Vec::new();
     let mut handshake_done = false;
 
+    let debug = std::env::var("TMUX_CMC_DEBUG").is_ok();
+
     for line_result in reader.lines() {
         let line = match line_result {
-            Ok(l) => l,
-            Err(_) => break, // tmux exited or pty closed
+            Ok(l) => {
+                if debug {
+                    let bytes: Vec<String> = l.bytes().map(|b| format!("{b:02x}")).collect();
+                    eprintln!("[tmux-cmc] line: {l:?} bytes=[{}]", bytes.join(" "));
+                }
+                l
+            }
+            Err(e) => {
+                if debug {
+                    eprintln!("[tmux-cmc] read error: {e}");
+                }
+                break;
+            }
         };
 
         match parse_line(&line) {
