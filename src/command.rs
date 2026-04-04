@@ -63,8 +63,7 @@ pub fn new_session(opts: &NewSessionOptions) -> String {
     }
     // Print the session id on stdout
     parts.push("-P".into());
-    parts.push("-F".into());
-    parts.push("#{session_id}".into());
+    parts.push("-F '#{session_id}'".into());
     parts.join(" ")
 }
 
@@ -87,8 +86,7 @@ pub fn new_window(opts: &NewWindowOptions) -> String {
         parts.push(shell_escape(name));
     }
     parts.push("-P".into());
-    parts.push("-F".into());
-    parts.push("#{window_id}".into());
+    parts.push("-F '#{window_id}'".into());
     if let Some(cmd) = &opts.start_command {
         parts.push(shell_escape(cmd));
     }
@@ -103,8 +101,7 @@ pub fn split_pane(opts: &SplitPaneOptions) -> String {
     parts.push("-t".into());
     parts.push(opts.target.to_string());
     parts.push("-P".into());
-    parts.push("-F".into());
-    parts.push("#{pane_id}".into());
+    parts.push("-F '#{pane_id}'".into());
     if let Some(cmd) = &opts.start_command {
         parts.push(shell_escape(cmd));
     }

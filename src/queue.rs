@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::VecDeque;
 use std::sync::Mutex;
 
 use oneshot::Sender;
@@ -11,38 +11,38 @@ pub struct PendingCommand {
 }
 
 struct Inner {
-    next_serial: u64,
-    pending: BTreeMap<u64, Sender<Response>>,
+    pending: VecDeque<Sender<Response>>,
 }
 
-/// Maps in-flight command serials to their oneshot response channels.
+/// FIFO queue mapping in-flight commands to their response channels.
+///
+/// tmux assigns its own serial numbers to responses — they do not match
+/// the client's internal numbering. Commands are processed in order, so
+/// the first pending waiter receives the first response regardless of
+/// the serial tmux assigns.
 pub struct PendingQueue(Mutex<Inner>);
 
 impl PendingQueue {
     pub fn new() -> Self {
         Self(Mutex::new(Inner {
-            next_serial: 1, // 0 is reserved for the startup handshake
-            pending: BTreeMap::new(),
+            pending: VecDeque::new(),
         }))
     }
 
-    /// Allocate a serial and register a response channel.
-    /// Returns `(serial, receiver)`.
-    pub fn register(&self) -> (u64, oneshot::Receiver<Response>) {
+    /// Register a response channel for the next command.
+    /// Returns a receiver that will get the response.
+    pub fn register(&self) -> oneshot::Receiver<Response> {
         let (tx, rx) = oneshot::channel();
         let mut inner = self.0.lock().expect("queue lock poisoned");
-        let serial = inner.next_serial;
-        inner.next_serial += 1;
-        inner.pending.insert(serial, tx);
-        (serial, rx)
+        inner.pending.push_back(tx);
+        rx
     }
 
-    /// Deliver a completed response to the waiting caller.
-    /// Silently drops if no waiter (e.g. serial 0 handshake).
-    pub fn deliver(&self, serial: u64, response: Response) {
+    /// Deliver a completed response to the next waiting caller (FIFO).
+    /// Silently drops if no waiter.
+    pub fn deliver(&self, response: Response) {
         let mut inner = self.0.lock().expect("queue lock poisoned");
-        if let Some(tx) = inner.pending.remove(&serial) {
-            // Ignore send error — caller may have timed out and dropped rx
+        if let Some(tx) = inner.pending.pop_front() {
             let _ = tx.send(response);
         }
     }

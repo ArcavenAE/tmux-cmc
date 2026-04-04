@@ -107,7 +107,7 @@ pub fn run(
                             output: std::mem::take(&mut accumulator),
                             is_error: false,
                         };
-                        queue.deliver(serial, response);
+                        queue.deliver(response);
                     }
                     current_serial = None;
                 }
@@ -121,7 +121,7 @@ pub fn run(
                         output: std::mem::take(&mut accumulator),
                         is_error: true,
                     };
-                    queue.deliver(serial, response);
+                    queue.deliver(response);
                     current_serial = None;
                     current_is_error = false;
                 }

@@ -201,19 +201,19 @@ impl Connection {
     /// Send a raw tmux command and wait for the response.
     pub fn send_command(&self, text: impl Into<String>) -> Result<Response> {
         let text = text.into();
-        let (serial, rx) = self.queue.register();
+        let rx = self.queue.register();
 
         self.writer_tx
             .send(PendingCommand { text: text.clone() })
             .map_err(|_| TmuxError::Disconnected)?;
 
-        let response = rx.recv_timeout(self.response_timeout).map_err(|_e| {
-            TmuxError::ResponseTimeout { serial }
-        })?;
+        let response = rx
+            .recv_timeout(self.response_timeout)
+            .map_err(|_e| TmuxError::ResponseTimeout { serial: 0 })?;
 
         if response.is_error {
             Err(TmuxError::CommandError {
-                serial,
+                serial: response.serial,
                 message: response.text(),
             })
         } else {
