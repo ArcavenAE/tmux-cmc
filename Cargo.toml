@@ -12,7 +12,7 @@ categories = ["command-line-utilities", "os"]
 [dependencies]
 thiserror = "2"
 oneshot = "0.1"
-rustix = { version = "0.38", features = ["pty"] }
+rustix = { version = "0.38", features = ["pty", "termios"] }
 
 [dev-dependencies]
 tempfile = "3"

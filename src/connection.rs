@@ -6,6 +6,7 @@ use std::thread;
 use std::time::Duration;
 
 use rustix::pty::{OpenptFlags, grantpt, openpt, ptsname, unlockpt};
+use rustix::termios::{self, OptionalActions};
 
 use crate::error::{Result, TmuxError};
 use crate::notification::Notification;
@@ -57,6 +58,31 @@ fn create_pty_pair() -> std::result::Result<(File, Stdio, Stdio), std::io::Error
         .read(true)
         .write(true)
         .open(secondary_path)?;
+
+    // Set the pty to raw mode. Without this, the kernel's terminal line
+    // discipline echoes input back to the primary and may process special
+    // characters in the control protocol output. Raw mode passes bytes
+    // through unchanged in both directions.
+    let mut attrs = termios::tcgetattr(&secondary_in).map_err(std::io::Error::from)?;
+    // Equivalent to cfmakeraw() — disable terminal processing so the
+    // control protocol passes through unchanged.
+    use rustix::termios::{InputModes, LocalModes, OutputModes};
+    attrs.input_modes &= !(InputModes::BRKINT
+        | InputModes::ICRNL
+        | InputModes::IGNBRK
+        | InputModes::IGNCR
+        | InputModes::INLCR
+        | InputModes::ISTRIP
+        | InputModes::IXON
+        | InputModes::PARMRK);
+    attrs.output_modes &= !OutputModes::OPOST;
+    attrs.local_modes &= !(LocalModes::ECHO
+        | LocalModes::ECHONL
+        | LocalModes::ICANON
+        | LocalModes::IEXTEN
+        | LocalModes::ISIG);
+    termios::tcsetattr(&secondary_in, OptionalActions::Now, &attrs)
+        .map_err(std::io::Error::from)?;
 
     let primary_file = File::from(primary);
 
