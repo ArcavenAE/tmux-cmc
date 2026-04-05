@@ -107,6 +107,26 @@ while let Ok(notif) = rx.recv() {
 client.run_command("display-message -p '#{session_id}'")?;
 ```
 
+## Platform Behavior
+
+Key design decisions validated through cross-platform testing (macOS tmux
+3.6a, Linux aarch64 tmux 3.5a). See finding-005 in aae-orc for the full
+evidence trail.
+
+- **Pty required for both stdin AND stdout.** tmux writes control protocol
+  through the pty, not a separate stdout pipe.
+- **Raw mode required** (cfmakeraw equivalent) to prevent echo and line
+  discipline interference on Linux. macOS and Linux pty defaults differ.
+- **Strip trailing `\r`** — raw mode disables OPOST, `\r\n` passes through
+  unchanged, BufReader::lines() leaves `\r`.
+- **FIFO response queue** — tmux assigns its own serial numbers, not the
+  client's. First waiter gets first response.
+- **DCS prefix** (`\x1bP1000p`) on first control mode line must be stripped.
+- **Handshake detection** matches first `%begin`/`%end` pair regardless of
+  serial (tmux 3.5a+ uses non-zero initial serial).
+- **Format string quoting** — `-F #{session_id}` needs quoting in control
+  mode: `-F '#{session_id}'`.
+
 ## Conventions
 
 - **Language:** Rust. Entire codebase.
