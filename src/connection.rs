@@ -91,16 +91,25 @@ fn create_pty_pair() -> std::result::Result<(File, Stdio, Stdio), std::io::Error
 
 impl Connection {
     /// Spawn `tmux -L <socket> -CC` and wait for the startup handshake.
-    pub fn spawn(socket_name: Option<&str>, handshake_timeout: Duration) -> Result<Arc<Self>> {
+    pub fn spawn(opts: &ConnectOptions) -> Result<Arc<Self>> {
         let mut cmd = Command::new("tmux");
 
-        if let Some(name) = socket_name {
+        if let Some(name) = opts.socket_name.as_deref() {
             cmd.args(["-L", name]);
         }
 
+        let session_name = opts
+            .control_session_name
+            .as_deref()
+            .unwrap_or("_tmux-cmc-ctrl");
+        let session_command = opts
+            .control_session_command
+            .as_deref()
+            .unwrap_or("cat");
+
         // `-CC` enters control mode.
-        // `new-session -A -s tmux-cmc` attaches if exists, creates otherwise.
-        cmd.args(["-CC", "new-session", "-A", "-D", "-s", "tmux-cmc-ctrl"]);
+        // `new-session -A -D -s <name> <command>` attaches if exists, creates otherwise.
+        cmd.args(["-CC", "new-session", "-A", "-D", "-s", session_name, session_command]);
 
         // Use a pty for both stdin and stdout — tmux calls tcgetattr on stdin
         // and writes control protocol output through the same pty, not to a
@@ -157,7 +166,7 @@ impl Connection {
             let guard = handshake.state.lock().expect("handshake lock poisoned");
             let (guard, _timed_out) = handshake
                 .cv
-                .wait_timeout_while(guard, handshake_timeout, |s| {
+                .wait_timeout_while(guard, opts.handshake_timeout, |s| {
                     *s == HandshakeState::Waiting
                 })
                 .expect("handshake condvar poisoned");
@@ -184,7 +193,7 @@ impl Connection {
             }
             HandshakeState::Waiting => {
                 return Err(TmuxError::HandshakeTimeout {
-                    timeout: handshake_timeout,
+                    timeout: opts.handshake_timeout,
                 });
             }
         }
@@ -237,6 +246,12 @@ impl Connection {
 pub struct ConnectOptions {
     pub socket_name: Option<String>,
     pub handshake_timeout: Duration,
+    /// Name of the control session created by the connection.
+    /// Defaults to `"_tmux-cmc-ctrl"` when `None`.
+    pub control_session_name: Option<String>,
+    /// Shell command to run inside the control session.
+    /// Defaults to `"cat"` (idle process) when `None`.
+    pub control_session_command: Option<String>,
 }
 
 impl Default for ConnectOptions {
@@ -244,6 +259,8 @@ impl Default for ConnectOptions {
         Self {
             socket_name: None,
             handshake_timeout: DEFAULT_HANDSHAKE_TIMEOUT,
+            control_session_name: None,
+            control_session_command: None,
         }
     }
 }

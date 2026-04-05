@@ -21,10 +21,10 @@ pub struct Client {
 impl Client {
     /// Connect to tmux via control mode.
     ///
-    /// Spawns `tmux [-L <socket>] -CC new-session -A -D -s tmux-cmc-ctrl` as a
+    /// Spawns `tmux [-L <socket>] -CC new-session -A -D -s <name> <command>` as a
     /// child process and waits for the startup handshake.
     pub fn connect(opts: &ConnectOptions) -> Result<Self> {
-        let conn = Connection::spawn(opts.socket_name.as_deref(), opts.handshake_timeout)?;
+        let conn = Connection::spawn(opts)?;
         Ok(Self { conn })
     }
 
