@@ -7,13 +7,13 @@ content: |
   by Notification::Unhandled { raw }. No data is lost, but structured
   access requires parsing raw strings.
 
-  Key constraint: aclaude's primary consumer runs Claude Code inside the
-  pane. Claude Code owns the terminal rendering — aclaude does NOT read
+  Key constraint: forestage's primary consumer runs Claude Code inside the
+  pane. Claude Code owns the terminal rendering — forestage does NOT read
   pane output (%output) and does NOT need most lifecycle notifications
-  because the pane's content is not aclaude's concern.
+  because the pane's content is not forestage's concern.
 
-  What aclaude actually uses from the notification stream:
-  - PaneExited: potentially (see question-aclaude-pane-lifecycle)
+  What forestage actually uses from the notification stream:
+  - PaneExited: potentially (see question-forestage-pane-lifecycle)
   - Everything else: not needed for the current use case
 
   Unhandled types that might matter if the consumer set grows:
@@ -21,7 +21,7 @@ content: |
     session lifecycle without creating the sessions itself
   - %window-renamed: display purposes
   - %layout-change: if a future consumer reacts to pane size changes
-  - %client-detached: if aclaude wants to know when a user detaches
+  - %client-detached: if forestage wants to know when a user detaches
 
   Unhandled types that are unlikely to matter:
   - %pane-mode-changed, %pause: internal tmux state, not consumer-relevant
@@ -38,7 +38,7 @@ content: |
 edges:
   - target: probe-consumer-tmux-strategy
     type: in-scope-of
-  - target: question-aclaude-pane-lifecycle
+  - target: question-forestage-pane-lifecycle
     type: related
 
 provenance:
@@ -46,4 +46,4 @@ provenance:
   session: session-009
   created_at: "2026-04-02"
   updated_at: "2026-04-02"
-  updated_by: "refined: aclaude runs Claude Code, pane output not needed"
+  updated_by: "refined: forestage runs Claude Code, pane output not needed"

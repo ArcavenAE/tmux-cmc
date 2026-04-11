@@ -1,5 +1,8 @@
 # tmux-cmc — tmux Control Mode Client
 
+> **Note:** The aclaude project has been renamed to forestage. References to
+> "aclaude" in this repo refer to forestage.
+
 ## What This Is
 
 A standalone Rust crate implementing the tmux control mode protocol (`tmux -CC`).
@@ -7,7 +10,7 @@ Bidirectional programmatic control of tmux: sessions, windows, panes, options,
 send-keys, and a real-time notification stream. Persistent connection — no
 per-command subprocess overhead.
 
-Published at `ArcavenAE/tmux-cmc`. Used by aclaude for session management and
+Published at `ArcavenAE/tmux-cmc`. Used by forestage for session management and
 statusline push. Usable by anyone building tmux tooling in Rust.
 
 ## Build / Run / Test
@@ -86,10 +89,10 @@ client.kill_session(&session)?;
 // Window / pane
 let win = client.new_window(&NewWindowOptions { session: session.clone(), .. })?;
 let pane = client.split_pane(&SplitPaneOptions { target: win, .. })?;
-client.send_keys(&pane, "aclaude", false)?;
+client.send_keys(&pane, "forestage", false)?;
 
 // Options
-client.set_status_left(&session, " aclaude ")?;
+client.set_status_left(&session, " forestage ")?;
 client.set_status_right(&session, " ok ")?;
 client.set_status_interval(&session, 2)?;
 client.set_option(&OptionTarget::Global, "status", "on")?;

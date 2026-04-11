@@ -11,7 +11,7 @@ a real gap in the Rust ecosystem.
 
 The crate is already working: bidirectional protocol, sync threads, FIFO
 response queue, 18+ tests, verified on macOS (tmux 3.6a) and Linux aarch64
-(tmux 3.5a). Two consumers: aclaude (session management, statusline) and
+(tmux 3.5a). Two consumers: forestage (session management, statusline) and
 potentially marvel (pane lifecycle events).
 
 ## What wider use requires
@@ -50,7 +50,7 @@ whether the maintenance burden of a public crate is worth the adoption.
 
 - Public crate means semver commitments. Breaking the API after publish
   requires a major version bump. The API hasn't been designed for
-  stability — it was designed for aclaude's needs.
+  stability — it was designed for forestage's needs.
 - More consumers means more platform edge cases. Session-010 showed
   that macOS and Linux tmux behave differently in ways unit tests
   don't catch.

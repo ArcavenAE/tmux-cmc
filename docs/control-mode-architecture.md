@@ -96,8 +96,8 @@ a session to attach to.
 
 ```
 socket "ac"
-├── _ctrl-aclaude (aclaude's control session)
-│   └── clients: [control-mode from aclaude]
+├── _ctrl-forestage (forestage's control session)
+│   └── clients: [control-mode from forestage]
 ├── _ctrl-marvel (marvel's control session)
 │   └── clients: [control-mode from marvel]
 ├── my-session (user session)
@@ -106,10 +106,10 @@ socket "ac"
 ```
 
 ```rust
-// aclaude's connection
-let aclaude_ctrl = Client::connect(&ConnectOptions {
+// forestage's connection
+let forestage_ctrl = Client::connect(&ConnectOptions {
     socket_name: Some("ac".into()),
-    control_session_name: Some("_ctrl-aclaude".into()),
+    control_session_name: Some("_ctrl-forestage".into()),
     control_session_command: Some("cat".into()),
     ..ConnectOptions::default()
 });
@@ -126,7 +126,7 @@ let marvel_ctrl = Client::connect(&ConnectOptions {
 **Pros:** Independent orchestrators don't interfere.
 **Cons:** Multiple control sessions. Only needed when multiple independent
 controllers exist.
-**Use when:** aclaude and marvel both managing sessions on the same socket.
+**Use when:** forestage and marvel both managing sessions on the same socket.
 Rare — marvel would typically be the sole orchestrator.
 
 ## tmux Operations via Control Mode
@@ -194,7 +194,7 @@ client.run_command("kill-session -t worker-1")?;
 - **Control mode client needs a session.** It must be attached to something.
   If that session is killed, the connection dies.
 - **No `-d` on user attach.** If the user attaches with `tmux attach -t session -d`,
-  it detaches ALL other clients including control mode. aclaude's attach
+  it detaches ALL other clients including control mode. forestage's attach
   does not use `-d`.
 - **Notifications are global.** A control mode client receives notifications
   for ALL sessions on the socket, not just the one it's attached to. This

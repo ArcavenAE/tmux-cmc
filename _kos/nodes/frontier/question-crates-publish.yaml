@@ -4,7 +4,7 @@ confidence: frontier
 title: "Publish tmux-cmc to crates.io and set up release CI"
 content: |
   The crate is crates.io-ready (no path deps, MIT/Apache-2.0, README)
-  but not yet published. The main consumer (aclaude) uses a path
+  but not yet published. The main consumer (forestage) uses a path
   dependency pointing to the adjacent checkout.
 
   Two gated steps before publish:
@@ -12,7 +12,7 @@ content: |
   2. CI release pipeline: tag → cargo publish via token in GitHub
      Actions secret
 
-  After publish: aclaude's Cargo.toml should migrate from
+  After publish: forestage's Cargo.toml should migrate from
   `tmux-cmc = { path = "../tmux-cmc" }` to
   `tmux-cmc = { git = "...", tag = "v0.1.0" }` (or crates.io version).
 
@@ -24,7 +24,7 @@ content: |
     incomplete for async consumers.
 
 edges:
-  - target: question-aclaude-dep-source
+  - target: question-forestage-dep-source
     type: blocks
 
 provenance:

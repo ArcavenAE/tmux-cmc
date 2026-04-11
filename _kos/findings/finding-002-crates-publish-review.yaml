@@ -95,7 +95,7 @@ content: |
   ### C2: HandshakeSignal/State should be pub(crate) explicitly
   ### C3: s[1..] byte slicing in ids.rs — safe but fragile
   ### C4: Missing doc comments on ConnectOptions fields
-  ### C5: aclaude references → forestage in README/docs
+  ### C5: forestage references updated throughout (done)
   ### C6: No CLOEXEC on pty FDs
   ### C7: No Serialize/Deserialize on ID types (feature flag candidate)
   ### C8: current_is_error dead code in reader.rs

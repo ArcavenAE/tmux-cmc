@@ -13,7 +13,7 @@ content: |
   When does this matter?
   - marvel's Go tmux driver is separate (no tokio needed there)
   - If a future Rust consumer (e.g. a tokio-based marvel plugin or
-    a tokio-native aclaude TUI) needs async tmux operations
+    a tokio-native forestage TUI) needs async tmux operations
   - For `async` ecosystem crates that expect `Send + Sync + async` APIs
 
   Questions:

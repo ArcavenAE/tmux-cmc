@@ -7,7 +7,7 @@ created_at: "2026-04-02"
 question: |
   Each platform component that interacts with tmux has different needs,
   different languages, and a different relationship to tmux sessions.
-  tmux-cmc (Rust, control mode client) exists and is used by aclaude.
+  tmux-cmc (Rust, control mode client) exists and is used by forestage.
   Is it the right tool for each consumer, or are there cases where
   a different strategy is correct?
 
@@ -17,13 +17,13 @@ question: |
   3. Is that strategy adequately covered today, or are there specific gaps?
 
 consumers:
-  aclaude:
+  forestage:
     language: Rust
     relationship_to_tmux: |
-      Session client. aclaude creates and manages the session that runs
+      Session client. forestage creates and manages the session that runs
       the `claude` CLI subprocess. It does NOT own the pane rendering —
       Claude Code owns the terminal surface inside the pane (TUI, input
-      box, output). aclaude's tmux surface is:
+      box, output). forestage's tmux surface is:
         - Session setup (create, configure, launch)
         - Status bar (set-option status-left/right in real-time)
         - Session teardown (kill or detach)
@@ -32,16 +32,16 @@ consumers:
     questions:
       - Does PaneExited notification reliably fire when `claude` exits?
         (tmux-cmc delivers it but integration test coverage is thin)
-      - Does aclaude need to react to PaneExited at all, or does the
+      - Does forestage need to react to PaneExited at all, or does the
         user handle session cleanup manually?
-      - Is there any case where aclaude needs to read pane output?
+      - Is there any case where forestage needs to read pane output?
         (No — Claude Code renders the pane. This is NOT needed.)
 
   marvel:
     language: Go
     relationship_to_tmux: |
       Fleet manager. marvel creates and manages many sessions across
-      the tmux substrate. Each session runs a BYOA console (aclaude,
+      the tmux substrate. Each session runs a BYOA console (forestage,
       zclaude, or bare `claude`). marvel's tmux surface is:
         - Session/pane lifecycle (create, list, kill, restart)
         - Health monitoring (is the process alive?)
@@ -89,7 +89,7 @@ consumers:
 hypotheses:
   - id: H1
     statement: |
-      aclaude's current use of tmux-cmc covers its actual needs. The main
+      forestage's current use of tmux-cmc covers its actual needs. The main
       gap is reliable PaneExited integration test coverage, not missing API.
 
   - id: H2
@@ -101,7 +101,7 @@ hypotheses:
 
   - id: H3
     statement: |
-      tmux-cmc's development roadmap should be driven by aclaude's actual
+      tmux-cmc's development roadmap should be driven by forestage's actual
       requirements (verified by integration tests), not by speculative
       requirements from Go consumers who won't use it.
 

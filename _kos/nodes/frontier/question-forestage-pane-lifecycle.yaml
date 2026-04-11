@@ -1,11 +1,11 @@
-id: question-aclaude-pane-lifecycle
+id: question-forestage-pane-lifecycle
 type: question
 confidence: frontier
-title: "Does aclaude need to detect and react to `claude` process death?"
+title: "Does forestage need to detect and react to `claude` process death?"
 content: |
-  aclaude creates a tmux pane and sends keys to launch `claude` (Claude Code).
+  forestage creates a tmux pane and sends keys to launch `claude` (Claude Code).
   Claude Code owns the terminal inside the pane — it renders its own TUI,
-  handles its own input, and aclaude does not read pane output.
+  handles its own input, and forestage does not read pane output.
 
   The question is what happens when `claude` exits:
   - Normal exit (user typed /exit, session completed)
@@ -13,8 +13,8 @@ content: |
   - Update restart (Claude Code updates itself and re-execs)
 
   tmux-cmc emits Notification::PaneExited { pane, exit_code } when the
-  process in a pane exits. But aclaude's current session_cmd.rs does not
-  subscribe to notifications — it sends keys to launch aclaude and
+  process in a pane exits. But forestage's current session_cmd.rs does not
+  subscribe to notifications — it sends keys to launch forestage and
   optionally execs attach-session, returning control to the user.
 
   Options:
@@ -22,22 +22,22 @@ content: |
      session, exit the control mode client. Gives a clean exit signal.
   2. **Leave it** — the user is inside the tmux pane. When `claude` exits,
      the pane shows the shell. The user can restart or exit manually.
-     No notification handling needed in aclaude's process.
+     No notification handling needed in forestage's process.
   3. **Auto-restart** — subscribe to PaneExited, send keys again to
      restart `claude` in the same pane. (Closer to marvel's role.)
 
-  The right answer depends on whether `aclaude session start` is meant
+  The right answer depends on whether `forestage session start` is meant
   to be a long-running daemon or a one-shot launcher:
-  - If aclaude session start is a launcher (exec tmux attach-session),
-    aclaude's process is gone once the user is in the session. PaneExited
-    would only matter if aclaude kept a background daemon running.
-  - If aclaude has a background daemon (future), it would need PaneExited.
+  - If forestage session start is a launcher (exec tmux attach-session),
+    forestage's process is gone once the user is in the session. PaneExited
+    would only matter if forestage kept a background daemon running.
+  - If forestage has a background daemon (future), it would need PaneExited.
 
   Current implementation: one-shot launcher. No daemon. PaneExited not
   subscribed to. This is probably correct for the current use case.
 
-  Open: if marvel manages aclaude sessions (future), it handles restart
-  policy — aclaude doesn't need to. The pane lifecycle concern moves up
+  Open: if marvel manages forestage sessions (future), it handles restart
+  policy — forestage doesn't need to. The pane lifecycle concern moves up
   to marvel.
 
 edges:

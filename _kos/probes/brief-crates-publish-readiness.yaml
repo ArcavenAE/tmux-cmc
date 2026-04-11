@@ -22,8 +22,8 @@ content: |
   5. Packaging — what to include/exclude from .crate file
   6. Unknown unknowns — what don't we know about publishing
 
-  Context: aclaude is being renamed to forestage. References in
-  tmux-cmc docs need updating.
+  Context: aclaude has been renamed to forestage. References in
+  tmux-cmc docs have been updated.
 
   ## Excluded scope
 

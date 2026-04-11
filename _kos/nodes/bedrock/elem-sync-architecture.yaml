@@ -12,7 +12,7 @@ content: |
   Notification subscription: `client.notifications()` returns a
   `std::sync::mpsc::Receiver<Notification>`.
 
-  Decision rationale: aclaude is entirely synchronous. Adding an async
+  Decision rationale: forestage is entirely synchronous. Adding an async
   runtime for a single I/O surface is unnecessary complexity. An `async`
   feature flag (tokio wrapper around the sync API) is deferred post-MVP.
 

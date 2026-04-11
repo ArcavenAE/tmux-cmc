@@ -25,7 +25,7 @@ content: |
   - Is a mock tmux subprocess (a small Rust binary that speaks the
     wire protocol) worth building for deterministic testing?
   - What's the minimum test coverage before declaring the crate
-    production-ready for aclaude?
+    production-ready for forestage?
 
 provenance:
   created_by: human+claude
