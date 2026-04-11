@@ -1,0 +1,11 @@
+id: question-documentation
+type: question
+confidence: frontier
+title: "Does the crate have enough documentation (rustdoc, examples, README) for external adoption?"
+content: |
+
+edges: []
+provenance:
+  created_by: human
+  session: null
+  created_at: "2026-04-11"

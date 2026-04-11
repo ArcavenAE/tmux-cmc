@@ -1,0 +1,89 @@
+id: finding-001-crates-publish-readiness
+type: finding
+confidence: frontier
+title: "Crates.io publish readiness assessment — concrete steps for ecosystem presence"
+content: |
+  ## Summary
+
+  External review of tmux-cmc for crates.io readiness. The crate has a
+  real reason to exist (persistent connection + notification stream vs
+  tmux_interface's per-command subprocess), tight scope, clear README.
+  The gap between "personal repo" and "thing you can depend on" is
+  about an hour of metadata + CI work.
+
+  ## Findings
+
+  ### F1: Cargo.toml metadata is the gating requirement
+
+  crates.io requires description + license. But findability requires:
+  keywords (max 5: tmux, terminal, multiplexer, ipc, control-mode),
+  categories (from fixed list: command-line-interface, api-bindings,
+  os::unix-apis), repository, homepage, documentation (docs.rs URL).
+  These are how crates.io search and faceted filtering find the crate.
+
+  ### F2: docs.rs builds automatically on publish
+
+  No docs hosting needed. docs.rs builds rustdoc from the published
+  crate and hosts at docs.rs/tmux-cmc. This IS the canonical API
+  documentation for Rust developers. The crate-level doc comment
+  (//! at top of lib.rs) becomes the landing page. Can use
+  #![doc = include_str!("../README.md")] to avoid duplication.
+
+  ### F3: Doc examples compile-checked by cargo test
+
+  Usage examples in doc comments with fenced rust blocks get compiled
+  by cargo test. This catches API drift between docs and code. Absence
+  is a visible immaturity signal.
+
+  ### F4: Badge row is load-bearing in Rust ecosystem
+
+  crates.io version, docs.rs, CI status, license, MSRV. Developers
+  scan badges to triage whether a crate is alive before reading the
+  README. A crate without a docs.rs badge reads as "probably hasn't
+  been published."
+
+  ### F5: _kos/ should be excluded from published crate
+
+  Add to Cargo.toml: exclude = ["_kos/", "CLAUDE.md", ".github/"]
+  Otherwise _kos scaffolding ships in the .crate file and bloats
+  the download for users who don't need it.
+
+  ### F6: Discoverability channels after publish
+
+  - This Week in Rust: "Crate of the Week" nomination + "Call for
+    Participation" section. Single most effective Rust announcement.
+  - r/rust weekly "What's everyone working on" thread.
+  - lib.rs mirrors automatically — no action needed.
+  - GitHub topics: tmux, rust, rust-crate, terminal-multiplexer, ipc.
+
+  ### F7: Pre-1.0 versioning convention
+
+  0.MINOR.PATCH where breaking changes bump MINOR. Cargo resolver
+  treats 0.1.x as compatible only within same minor. The README
+  already shows `tmux-cmc = "0.1"` which is correct.
+
+  ## Assessment
+
+  Result: confirms. The crate is publishable with metadata work.
+  The main blockers are: Cargo.toml metadata, crate-level rustdoc,
+  doc examples, CI workflow, badge row. None of these are code
+  changes — they're packaging and documentation.
+
+edges:
+  - target: question-crates-publish
+    type: partially_resolves
+    note: "Concrete steps identified, not yet executed"
+  - target: question-documentation
+    type: partially_resolves
+    note: "docs.rs + rustdoc + doc examples identified as requirements"
+  - target: question-api-stability
+    type: derives
+    note: "Pre-1.0 versioning convention gives room for API changes"
+provenance:
+  created_by: human
+  session: session-014
+  created_at: "2026-04-11"
+finding:
+  probe: null
+  result: confirms
+  surprise_magnitude: none

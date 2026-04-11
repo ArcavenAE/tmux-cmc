@@ -1,0 +1,11 @@
+id: question-api-stability
+type: question
+confidence: frontier
+title: "Is the public API stable enough for external consumers? What would break?"
+content: |
+
+edges: []
+provenance:
+  created_by: human
+  session: null
+  created_at: "2026-04-11"
