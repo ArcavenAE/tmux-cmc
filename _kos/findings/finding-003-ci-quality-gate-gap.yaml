@@ -1,0 +1,56 @@
+id: finding-003-ci-quality-gate-gap
+type: finding
+confidence: frontier
+title: "No CI is a publish blocker — review classified it as important, should have been blocker"
+content: |
+  ## Summary
+
+  The pre-publish review (finding-002) classified "CI pipeline missing"
+  as I10 (important, should fix). This was wrong — no CI is a blocker
+  for publishing a crate.
+
+  ## Finding
+
+  Without CI:
+  - Pre-commit hooks only run locally, only for the person committing
+  - Dependabot PRs have zero quality checks
+  - Contributors, agents in worktrees have no gates
+  - The CI badge in the README (added in this session) links to a
+    non-existent workflow — a visible broken badge on crates.io
+  - No automated test verification on any platform
+  - The README claims macOS + Linux support but there's no CI
+    verifying Linux
+
+  Every other repo in the ecosystem (kos, forestage, switchboard,
+  ThreeDoors) has CI with quality gates. tmux-cmc is the only one
+  publishing to an external registry (crates.io) and it's the only
+  one without CI.
+
+  ## Meta-finding: review severity calibration
+
+  The review produced a clean blocker/important/cosmetic split but
+  miscalibrated CI as "important." The error: treating CI as a
+  quality-of-life improvement rather than a quality gate. When the
+  audience is external (crates.io users, not just the developer),
+  CI is load-bearing — it's the only verification that the published
+  artifact works on platforms the README claims to support.
+
+  This is a prediction calibration signal. The review's severity
+  model was developer-centric (does it affect the code?) rather than
+  consumer-centric (does it affect trust in the crate?).
+
+edges:
+  - target: finding-002-crates-publish-review
+    type: supersedes
+    note: "Reclassifies I10 as a blocker, superseding the original severity"
+  - target: brief-crates-publish-readiness
+    type: discovered_from
+    note: "Found during the probe execution, not in the original review"
+provenance:
+  created_by: human
+  session: session-014
+  created_at: "2026-04-11"
+finding:
+  probe: brief-crates-publish-readiness
+  result: redirects
+  surprise_magnitude: low

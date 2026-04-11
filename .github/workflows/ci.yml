@@ -1,0 +1,135 @@
+# CI — quality gates for tmux-cmc
+# Runs on push to main and pull requests.
+# No binary releases — this is a library crate published via cargo publish.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '_kos/**'
+      - 'LICENSE'
+      - '.gitignore'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '_kos/**'
+      - 'LICENSE'
+      - '.gitignore'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: 1
+
+jobs:
+  check-fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@5b842231ba77f5c045dba54ac5560fed2db780e2 # nightly
+        with:
+          toolchain: nightly
+          components: rustfmt
+      - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
+        with:
+          cache-on-failure: true
+      - run: cargo +nightly fmt --all -- --check
+
+  check-clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          toolchain: stable
+          components: clippy
+      - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
+        with:
+          cache-on-failure: true
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+
+  test-linux:
+    name: Test (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
+        with:
+          cache-on-failure: true
+      - run: cargo test --all-targets
+      - run: cargo test --doc
+
+  test-macos:
+    name: Test (macOS)
+    runs-on: macos-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
+        with:
+          cache-on-failure: true
+      - run: cargo test --all-targets
+      - run: cargo test --doc
+
+  deny:
+    name: Cargo Deny
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176 # v2.17.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: EmbarkStudios/cargo-deny-action@82eb9f621fbc699dd0918f3ea06864c14cc84246 # v2
+        with:
+          command: check advisories licenses bans
