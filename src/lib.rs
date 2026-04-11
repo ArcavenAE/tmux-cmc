@@ -20,6 +20,9 @@
 //! ```
 #![forbid(unsafe_code)]
 
+#[cfg(not(unix))]
+compile_error!("tmux-cmc requires a unix platform (tmux is unix-only)");
+
 pub(crate) mod command;
 pub(crate) mod connection;
 pub(crate) mod ids;
