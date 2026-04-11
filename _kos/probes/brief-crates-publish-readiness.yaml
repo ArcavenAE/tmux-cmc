@@ -1,0 +1,55 @@
+id: brief-crates-publish-readiness
+type: brief
+confidence: frontier
+title: "What needs to change in tmux-cmc before publishing to crates.io?"
+content: |
+  ## Question
+
+  What architectural, security, documentation, packaging, and community
+  standards changes are needed before tmux-cmc can be published to
+  crates.io as a quality Rust ecosystem crate?
+
+  ## Approach
+
+  1. Architectural review — public API surface, error types, thread
+     safety, resource cleanup, type design, ergonomics
+  2. Security review — command injection, process spawning, FD handling,
+     signal handling, DoS vectors
+  3. Rust community standards research — API guidelines, publishing
+     requirements, quality signals, common gotchas
+  4. Documentation audit — rustdoc, examples, README, provenance
+     (why tmux-cmc exists, link to forestage/marvel)
+  5. Packaging — what to include/exclude from .crate file
+  6. Unknown unknowns — what don't we know about publishing
+
+  Context: aclaude is being renamed to forestage. References in
+  tmux-cmc docs need updating.
+
+  ## Excluded scope
+
+  - Actually running cargo publish (this probe produces the checklist)
+  - Async feature flag implementation (separate question)
+  - Marketing/outreach (This Week in Rust, etc.) — post-publish
+edges:
+  - target: question-crates-publish
+    type: derives
+    note: "This probe investigates the crates.io publish question"
+  - target: question-api-stability
+    type: derives
+    note: "API stability is part of publish readiness"
+  - target: question-documentation
+    type: derives
+    note: "Documentation is part of publish readiness"
+  - target: question-platform-matrix
+    type: derives
+    note: "Platform support is part of publish readiness"
+provenance:
+  created_by: human
+  session: session-014
+  created_at: "2026-04-11"
+brief:
+  hypothesis: "The crate is architecturally sound but needs packaging, documentation, and minor API cleanup — no fundamental redesign needed before publish."
+  excluded_scope: "cargo publish execution, async feature, marketing"
+  success_signal: "Produce a prioritized checklist (blocker/important/cosmetic) with specific file-level changes. No surprises in the security review."
+  timebox: "1 session"
+  predicted_confidence: 0.75

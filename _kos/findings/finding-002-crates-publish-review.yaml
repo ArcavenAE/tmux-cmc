@@ -1,0 +1,145 @@
+id: finding-002-crates-publish-review
+type: finding
+confidence: frontier
+title: "Pre-publish review — 4 blockers, 11 important, 8 cosmetic from architectural + security + standards review"
+content: |
+  ## Summary
+
+  Combined architectural review, security review, and Rust community
+  standards research for tmux-cmc crates.io publish readiness. Three
+  parallel investigations merged into a single prioritized checklist.
+
+  predicted_confidence was 0.75 ("architecturally sound, needs packaging
+  not redesign"). The command injection and race condition are surprises.
+
+  ## BLOCKERS (must fix before cargo publish)
+
+  ### B1: Command injection via newlines (SECURITY)
+  shell_escape() in command.rs doesn't handle \n, \r, \0. A session
+  name containing a newline splits into two tmux commands. Example:
+  "foo\nkill-server" sends kill-server as a separate valid command.
+  Fix: reject or escape control characters in shell_escape().
+  Affects: all commands passing user input (session names, window
+  names, send_keys, option values, has_session).
+
+  ### B2: Race condition in send_command (CORRECTNESS)
+  queue.register() and writer_tx.send() in connection.rs are not
+  atomic. Concurrent callers can get each other's responses. Thread A
+  registers slot 1, thread B registers slot 2, but B's command reaches
+  tmux first → B's response goes to A's slot.
+  Fix: hold a lock spanning both register and send, or register
+  inside the writer thread after queuing.
+
+  ### B3: No Drop implementation (RESOURCE SAFETY)
+  When Client is dropped: tmux child process orphaned (never killed),
+  threads leaked (join handles discarded), pty FDs not deterministically
+  closed. Zombie processes and leaked tmux sessions.
+  Fix: implement Drop for Connection — kill child, join threads.
+
+  ### B4: Option structs not #[non_exhaustive] (API STABILITY)
+  ConnectOptions, NewSessionOptions, NewWindowOptions, SplitPaneOptions
+  use struct literal syntax. Adding any field is a breaking change.
+  Must add #[non_exhaustive] before 0.1.0 — locks API shape permanently.
+  Also affects Response (all fields pub).
+
+  ### B5: Cargo.toml exclude missing (PACKAGING)
+  _kos/, CLAUDE.md, deny.toml, justfile, rust-toolchain.toml, docs/,
+  .claude/ would all ship in the .crate file. Must exclude.
+
+  ### B6: Platform handling (COMPILATION)
+  Crate will fail to compile on non-unix (rustix pty features).
+  Must either #[cfg(unix)] the entire API (preferred) or
+  compile_error! on unsupported platforms. Also needs docs.rs
+  target metadata.
+
+  ## IMPORTANT (should fix, will affect adoption)
+
+  ### I1: ResponseTimeout reports serial: 0 always
+  Misleading. Either track real serial or remove from variant.
+
+  ### I2: Response.is_error is pub but never seen as true
+  Error responses become Err(CommandError). Field should be pub(crate).
+
+  ### I3: Thread join handles discarded
+  Panics in reader/writer threads silently swallowed. Store JoinHandles,
+  join in Drop.
+
+  ### I4: Response timeout not configurable
+  30s hardcoded. Add response_timeout to ConnectOptions.
+
+  ### I5: Unbounded response accumulation
+  Reader accumulator Vec<String> grows without limit between %begin/%end.
+  Add max line count or byte limit.
+
+  ### I6: control_session_command security documentation
+  Value is executed by tmux as shell command. Must document clearly.
+
+  ### I7: Debug impl missing on Client
+  Rust API Guidelines C-DEBUG: all public types should implement Debug.
+
+  ### I8: PartialEq missing on Response and Notification
+  API Guidelines C-COMMON-TRAITS.
+
+  ### I9: CHANGELOG.md missing
+  Standard for published crates. Keep a Changelog format.
+
+  ### I10: CI pipeline missing
+  No .github/workflows/. Quality signal for potential dependents.
+
+  ### I11: Verify Client: Send + Sync with compile-time assertion
+  Should be true (Arc<Connection>, Mutex internals) but needs test.
+
+  ## COSMETIC (nice to have)
+
+  ### C1: Duplicate Result<T> type alias (error.rs + lib.rs)
+  ### C2: HandshakeSignal/State should be pub(crate) explicitly
+  ### C3: s[1..] byte slicing in ids.rs — safe but fragile
+  ### C4: Missing doc comments on ConnectOptions fields
+  ### C5: aclaude references → forestage in README/docs
+  ### C6: No CLOEXEC on pty FDs
+  ### C7: No Serialize/Deserialize on ID types (feature flag candidate)
+  ### C8: current_is_error dead code in reader.rs
+
+  ## Assessment
+
+  The crate is architecturally sound in structure but has real security
+  and correctness issues that must be fixed before publishing. The
+  command injection (B1) is exploitable if callers pass user-controlled
+  input. The race condition (B2) affects any multi-threaded consumer.
+  The missing Drop (B3) leaks resources in all usage patterns.
+
+  These are fixable without redesign. The fixes are:
+  - B1: ~20 lines in shell_escape()
+  - B2: ~30 lines to add a lock in send_command
+  - B3: ~40 lines for Drop implementation
+  - B4: add #[non_exhaustive] to 5 structs
+  - B5: add exclude list to Cargo.toml
+  - B6: add #[cfg(unix)] wrapper + docs.rs metadata
+
+  Total estimate: moderate (not an hour, but not a redesign either).
+  The important items (I1-I11) can follow in 0.1.1.
+
+edges:
+  - target: question-crates-publish
+    type: partially_resolves
+    note: "Concrete blocker list identified, not yet fixed"
+  - target: question-api-stability
+    type: partially_resolves
+    note: "B4 (#[non_exhaustive]) and Response fields identified"
+  - target: question-documentation
+    type: partially_resolves
+    note: "Documentation gaps catalogued"
+  - target: question-platform-matrix
+    type: partially_resolves
+    note: "B6 identifies platform handling requirement"
+  - target: finding-001-crates-publish-readiness
+    type: supersedes
+    note: "This finding is the detailed review; finding-001 was the initial assessment"
+provenance:
+  created_by: human
+  session: session-014
+  created_at: "2026-04-11"
+finding:
+  probe: brief-crates-publish-readiness
+  result: partial
+  surprise_magnitude: medium
