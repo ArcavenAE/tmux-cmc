@@ -13,11 +13,7 @@
 //! let client = Client::connect(&ConnectOptions::default())?;
 //!
 //! if !client.has_session("demo")? {
-//!     let session = client.new_session(&NewSessionOptions {
-//!         name: Some("demo".into()),
-//!         detached: true,
-//!         ..Default::default()
-//!     })?;
+//!     let session = client.new_session(&NewSessionOptions::named("demo"))?;
 //!     client.set_status_left(&session, "tmux-cmc demo")?;
 //! }
 //! # Ok::<(), tmux_cmc::TmuxError>(())

@@ -6,8 +6,12 @@ rust-version = "1.85"
 license = "MIT"
 description = "tmux control mode client — bidirectional programmatic tmux control"
 repository = "https://github.com/ArcavenAE/tmux-cmc"
+homepage = "https://github.com/ArcavenAE/tmux-cmc"
+documentation = "https://docs.rs/tmux-cmc"
+readme = "README.md"
 keywords = ["tmux", "control-mode", "terminal", "multiplexer", "automation"]
-categories = ["command-line-utilities", "os"]
+categories = ["command-line-interface", "api-bindings", "os::unix-apis"]
+exclude = ["_kos/", "CLAUDE.md", "deny.toml", "justfile", "Justfile", "rust-toolchain.toml", ".claude/", "docs/"]
 
 [dependencies]
 thiserror = "2"
@@ -19,6 +23,9 @@ tempfile = "3"
 
 [features]
 default = []
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu", "aarch64-apple-darwin"]
 
 [lints.clippy]
 cloned_instead_of_copied = "warn"

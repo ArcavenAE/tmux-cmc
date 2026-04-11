@@ -23,10 +23,17 @@ pub struct Connection {
     writer_tx: mpsc::SyncSender<PendingCommand>,
     /// Pending command queue — maps serials to oneshot response channels.
     queue: Arc<PendingQueue>,
+    /// Lock ensuring register() + send() are atomic. Without this, concurrent
+    /// callers can get each other's responses (the FIFO queue assigns slots
+    /// in register order, but commands may reach tmux in send order).
+    send_lock: Mutex<()>,
     /// Notification broadcast list.
     notif_senders: Arc<Mutex<Vec<mpsc::Sender<Notification>>>>,
     /// The tmux child process.
-    _child: Mutex<Child>,
+    child: Mutex<Child>,
+    /// Thread handles for cleanup on drop.
+    writer_thread: Mutex<Option<thread::JoinHandle<()>>>,
+    reader_thread: Mutex<Option<thread::JoinHandle<()>>>,
     /// Timeout for individual command responses.
     response_timeout: Duration,
 }
@@ -143,23 +150,21 @@ impl Connection {
 
         // Spawn writer thread — writes commands to the pty primary
         let (writer_tx, writer_rx) = mpsc::sync_channel::<PendingCommand>(64);
-        {
-            thread::Builder::new()
-                .name("tmux-cmc-writer".into())
-                .spawn(move || writer_run(writer_rx, primary_file))
-                .map_err(TmuxError::Io)?;
-        }
+        let writer_handle = thread::Builder::new()
+            .name("tmux-cmc-writer".into())
+            .spawn(move || writer_run(writer_rx, primary_file))
+            .map_err(TmuxError::Io)?;
 
         // Spawn reader thread — reads control protocol from the pty primary
-        {
+        let reader_handle = {
             let queue_clone = Arc::clone(&queue);
             let notif_clone = Arc::clone(&notif_senders);
             let handshake_clone = Arc::clone(&handshake);
             thread::Builder::new()
                 .name("tmux-cmc-reader".into())
                 .spawn(move || reader_run(primary_reader, queue_clone, notif_clone, handshake_clone))
-                .map_err(TmuxError::Io)?;
-        }
+                .map_err(TmuxError::Io)?
+        };
 
         // Wait for handshake
         let state = {
@@ -201,8 +206,11 @@ impl Connection {
         Ok(Arc::new(Self {
             writer_tx,
             queue,
+            send_lock: Mutex::new(()),
             notif_senders,
-            _child: Mutex::new(child),
+            child: Mutex::new(child),
+            writer_thread: Mutex::new(Some(writer_handle)),
+            reader_thread: Mutex::new(Some(reader_handle)),
             response_timeout: DEFAULT_RESPONSE_TIMEOUT,
         }))
     }
@@ -210,11 +218,19 @@ impl Connection {
     /// Send a raw tmux command and wait for the response.
     pub fn send_command(&self, text: impl Into<String>) -> Result<Response> {
         let text = text.into();
-        let rx = self.queue.register();
 
-        self.writer_tx
-            .send(PendingCommand { text: text.clone() })
-            .map_err(|_| TmuxError::Disconnected)?;
+        // Hold the send lock across register + send to ensure FIFO ordering.
+        // Without this, concurrent callers can register in one order but
+        // have their commands reach tmux in a different order, causing
+        // response misrouting.
+        let rx = {
+            let _lock = self.send_lock.lock().expect("send lock poisoned");
+            let rx = self.queue.register();
+            self.writer_tx
+                .send(PendingCommand { text: text.clone() })
+                .map_err(|_| TmuxError::Disconnected)?;
+            rx
+        };
 
         let response = rx
             .recv_timeout(self.response_timeout)
@@ -241,8 +257,35 @@ impl Connection {
     }
 }
 
+impl Drop for Connection {
+    fn drop(&mut self) {
+        // Kill the tmux child process. Without this, tmux becomes orphaned
+        // and continues running after the client is dropped.
+        if let Ok(mut child) = self.child.lock() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+
+        // Join threads. The writer thread exits when its channel is closed
+        // (writer_tx dropped). The reader thread exits when the pty primary
+        // is closed (EOF on read). Both should happen promptly after the
+        // child is killed.
+        if let Ok(mut handle) = self.writer_thread.lock() {
+            if let Some(h) = handle.take() {
+                let _ = h.join();
+            }
+        }
+        if let Ok(mut handle) = self.reader_thread.lock() {
+            if let Some(h) = handle.take() {
+                let _ = h.join();
+            }
+        }
+    }
+}
+
 /// Options for establishing a control mode connection.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct ConnectOptions {
     pub socket_name: Option<String>,
     pub handshake_timeout: Duration,
@@ -252,6 +295,16 @@ pub struct ConnectOptions {
     /// Shell command to run inside the control session.
     /// Defaults to `"cat"` (idle process) when `None`.
     pub control_session_command: Option<String>,
+}
+
+impl ConnectOptions {
+    /// Create connect options with the given socket name.
+    pub fn with_socket(name: impl Into<String>) -> Self {
+        Self {
+            socket_name: Some(name.into()),
+            ..Default::default()
+        }
+    }
 }
 
 impl Default for ConnectOptions {

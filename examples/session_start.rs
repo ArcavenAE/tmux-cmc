@@ -7,10 +7,7 @@
 use tmux_cmc::{Client, ConnectOptions, NewSessionOptions};
 
 fn main() -> tmux_cmc::Result<()> {
-    let client = Client::connect(&ConnectOptions {
-        socket_name: Some("example".into()),
-        ..ConnectOptions::default()
-    })?;
+    let client = Client::connect(&ConnectOptions::with_socket("example"))?;
 
     println!("Connected to tmux control mode.");
 
@@ -18,20 +15,10 @@ fn main() -> tmux_cmc::Result<()> {
 
     let session = if client.has_session(session_name)? {
         println!("Session '{session_name}' already exists.");
-        // Re-use it — in a real scenario you'd query the session id
-        // For the example, we just re-create with the same name (tmux handles -A)
-        client.new_session(&NewSessionOptions {
-            name: Some(session_name.into()),
-            detached: true,
-            ..Default::default()
-        })?
+        client.new_session(&NewSessionOptions::named(session_name))?
     } else {
         println!("Creating session '{session_name}'...");
-        client.new_session(&NewSessionOptions {
-            name: Some(session_name.into()),
-            detached: true,
-            ..Default::default()
-        })?
+        client.new_session(&NewSessionOptions::named(session_name))?
     };
 
     println!("Session id: {session}");
