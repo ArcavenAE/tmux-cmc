@@ -93,7 +93,11 @@ fn create_pty_pair() -> std::result::Result<(File, Stdio, Stdio), std::io::Error
 
     let primary_file = File::from(primary);
 
-    Ok((primary_file, Stdio::from(secondary_in), Stdio::from(secondary_out)))
+    Ok((
+        primary_file,
+        Stdio::from(secondary_in),
+        Stdio::from(secondary_out),
+    ))
 }
 
 impl Connection {
@@ -109,20 +113,24 @@ impl Connection {
             .control_session_name
             .as_deref()
             .unwrap_or("_tmux-cmc-ctrl");
-        let session_command = opts
-            .control_session_command
-            .as_deref()
-            .unwrap_or("cat");
+        let session_command = opts.control_session_command.as_deref().unwrap_or("cat");
 
         // `-CC` enters control mode.
         // `new-session -A -D -s <name> <command>` attaches if exists, creates otherwise.
-        cmd.args(["-CC", "new-session", "-A", "-D", "-s", session_name, session_command]);
+        cmd.args([
+            "-CC",
+            "new-session",
+            "-A",
+            "-D",
+            "-s",
+            session_name,
+            session_command,
+        ]);
 
         // Use a pty for both stdin and stdout — tmux calls tcgetattr on stdin
         // and writes control protocol output through the same pty, not to a
         // separate stdout pipe.
         let (primary_file, stdin_stdio, stdout_stdio) = create_pty_pair()?;
-
 
         cmd.stdin(stdin_stdio)
             .stdout(stdout_stdio)
@@ -139,9 +147,7 @@ impl Connection {
         let stderr_handle = child.stderr.take();
 
         // Clone primary for reading — writer and reader share the same pty fd.
-        let primary_reader = primary_file
-            .try_clone()
-            .map_err(TmuxError::Io)?;
+        let primary_reader = primary_file.try_clone().map_err(TmuxError::Io)?;
 
         let queue = Arc::new(PendingQueue::new());
         let notif_senders: Arc<Mutex<Vec<mpsc::Sender<Notification>>>> =
@@ -162,7 +168,9 @@ impl Connection {
             let handshake_clone = Arc::clone(&handshake);
             thread::Builder::new()
                 .name("tmux-cmc-reader".into())
-                .spawn(move || reader_run(primary_reader, queue_clone, notif_clone, handshake_clone))
+                .spawn(move || {
+                    reader_run(primary_reader, queue_clone, notif_clone, handshake_clone)
+                })
                 .map_err(TmuxError::Io)?
         };
 

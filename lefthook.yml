@@ -1,0 +1,14 @@
+pre-commit:
+  parallel: true
+  commands:
+    fmt:
+      run: cargo +nightly fmt --all -- --check
+    clippy:
+      run: cargo clippy --all-targets --all-features -- -D warnings
+    deny:
+      run: cargo deny check advisories licenses bans
+
+pre-push:
+  commands:
+    test:
+      run: cargo test
