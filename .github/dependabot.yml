@@ -1,0 +1,21 @@
+# dependabot.yml for Rust (Cargo) projects
+# Copy to .github/dependabot.yml
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+    groups:
+      actions:
+        patterns:
+          - "*"
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: daily
+    labels:
+      - "dependencies"
