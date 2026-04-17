@@ -8,6 +8,11 @@ pub struct NewSessionOptions {
     /// Start detached (don't attach the current client). Recommended.
     pub detached: bool,
     pub start_directory: Option<std::path::PathBuf>,
+    /// Command to run as the initial process of the session's first pane,
+    /// bypassing the shell. Equivalent to the trailing `[shell-command]`
+    /// positional arg of `tmux new-session`. When set, no shell runs in
+    /// the pane — so no shell-echo of the command string appears.
+    pub start_command: Option<String>,
 }
 
 impl NewSessionOptions {
@@ -75,9 +80,13 @@ pub fn new_session(opts: &NewSessionOptions) -> String {
         parts.push("-c".into());
         parts.push(shell_escape(&dir.to_string_lossy()));
     }
-    // Print the session id on stdout
+    // Print the session id on stdout. `-P -F` must precede the trailing
+    // shell-command arg so tmux doesn't parse `-F` as part of it.
     parts.push("-P".into());
     parts.push("-F '#{session_id}'".into());
+    if let Some(cmd) = &opts.start_command {
+        parts.push(shell_escape(cmd));
+    }
     parts.join(" ")
 }
 
@@ -270,5 +279,40 @@ mod tests {
     #[test]
     fn shell_escape_only_control_chars() {
         assert_eq!(shell_escape("\n\r\0"), "''");
+    }
+
+    #[test]
+    fn new_session_without_start_command() {
+        let opts = NewSessionOptions::named("work");
+        let cmd = new_session(&opts);
+        assert_eq!(cmd, "new-session -d -s work -P -F '#{session_id}'");
+    }
+
+    #[test]
+    fn new_session_with_start_command() {
+        let opts = NewSessionOptions {
+            start_command: Some("/usr/local/bin/forestage".into()),
+            ..NewSessionOptions::named("work")
+        };
+        let cmd = new_session(&opts);
+        // Start command is the trailing positional arg, appearing AFTER -F
+        // so tmux doesn't parse it as part of the format string.
+        assert_eq!(
+            cmd,
+            "new-session -d -s work -P -F '#{session_id}' /usr/local/bin/forestage"
+        );
+    }
+
+    #[test]
+    fn new_session_with_start_command_quotes_spaces() {
+        let opts = NewSessionOptions {
+            start_command: Some("forestage --role reviewer".into()),
+            ..NewSessionOptions::named("work")
+        };
+        let cmd = new_session(&opts);
+        assert!(
+            cmd.ends_with("'forestage --role reviewer'"),
+            "expected trailing quoted command, got: {cmd}"
+        );
     }
 }
