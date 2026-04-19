@@ -11,11 +11,13 @@ updates:
         patterns:
           - "*"
     labels:
-      - "dependencies"
+      - "type.deps"
+      - "agent.bot"
 
   - package-ecosystem: cargo
     directory: /
     schedule:
       interval: daily
     labels:
-      - "dependencies"
+      - "type.deps"
+      - "agent.bot"
