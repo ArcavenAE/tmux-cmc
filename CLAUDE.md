@@ -148,7 +148,7 @@ this crate live here.
 2. Identify the highest-value open question — or capture ideas in `_kos/ideas/`
 3. Write an Exploration Brief in `_kos/probes/`
 4. Do the probe work
-5. Write a finding in `_kos/findings/`
+5. Write a finding in `_kos/findings/`. Mint the id with `kos id finding <slug>`; never hand-allocate a number.
 6. Harvest: update affected NODES (`_kos/nodes/{bedrock,frontier,graveyard}/*.yaml`),
    move files if confidence changed. Charter is renderer output (per orc F22,
    `kos charter render`); do NOT hand-edit charter prose outside
