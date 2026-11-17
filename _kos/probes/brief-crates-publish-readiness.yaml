@@ -59,5 +59,6 @@ brief:
     stays a human act.
     The checklist the success signal asks for is finding-002-crates-publish-review,
     and both finding-002 (result: partial) and finding-003-ci-quality-gate-gap
-    (result: redirects) name this brief in their probe fields. The blockers
-    were fixed in commits 1ea77ab and 904ebb5.
+    (result: redirects) name this brief in their probe fields. At tmux-cmc
+    e1a7620, B1 to B3 and B5 are fixed by 1ea77ab, B6 by 904ebb5 and 1ea77ab, and
+    B4 is fixed for the four option structs but not Response.

@@ -44,7 +44,7 @@ edges:
     note: "result confirms: publishable with metadata work"
   - target: finding-002-crates-publish-review
     type: supports
-    note: "pre-publish review: the title says 4 blockers (its body lists B1 to B6), 11 important, 8 cosmetic; the blockers were fixed in 1ea77ab and 904ebb5"
+    note: "pre-publish review: the title says 4 blockers (its body lists B1 to B6), 11 important, 8 cosmetic; at e1a7620 B1 to B3 and B5 are fixed by 1ea77ab, B6 by 904ebb5 (compile_error! on non-unix) and 1ea77ab (docs.rs targets), and B4 is fixed for the four option structs but not Response"
   - target: finding-003-ci-quality-gate-gap
     type: supports
     note: "no CI was a publish blocker; the quality gate pipeline landed in 3b62b21"
