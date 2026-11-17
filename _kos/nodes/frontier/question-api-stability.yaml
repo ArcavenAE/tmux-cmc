@@ -3,8 +3,19 @@ type: question
 confidence: frontier
 title: "Is the public API stable enough for external consumers? What would break?"
 content: |
+  Harvest 2026-11-17 (I-532): this node had no body. finding-002 (blocker B4)
+  named the instability: public enums that a new variant would break. At
+  tmux-cmc e1a7620 `#[non_exhaustive]` is on the public types in
+  `src/command.rs` (lines 5, 31 and 41), `src/connection.rs:296`,
+  `src/error.rs:6` and `src/notification.rs:8`, so adding a variant is no
+  longer a breaking change for consumers. Whether the rest of the public
+  surface is stable for external consumers is not assessed here. No
+  confidence change.
 
-edges: []
+edges:
+  - target: finding-002-crates-publish-review
+    type: supports
+    note: "blocker B4 named the missing #[non_exhaustive]; the built state has it"
 provenance:
   created_by: human
   session: null

@@ -53,3 +53,11 @@ brief:
   success_signal: "Produce a prioritized checklist (blocker/important/cosmetic) with specific file-level changes. No surprises in the security review."
   timebox: "1 session"
   predicted_confidence: 0.75
+  status: complete
+  outcome: |
+    Marked complete in the 2026-11-17 harvest (I-532), from the evidence below; closing
+    stays a human act.
+    The checklist the success signal asks for is finding-002-crates-publish-review,
+    and both finding-002 (result: partial) and finding-003-ci-quality-gate-gap
+    (result: redirects) name this brief in their probe fields. The blockers
+    were fixed in commits 1ea77ab and 904ebb5.

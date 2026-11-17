@@ -23,9 +23,31 @@ content: |
     after initial publish? If after, the 0.1.0 API should be considered
     incomplete for async consumers.
 
+  Harvest 2026-11-17 (I-532), at tmux-cmc e1a7620. Findings 001 to 003 are now
+  back-referenced: finding-001 (result: confirms, publishable with metadata
+  work), finding-002 (the pre-publish review: 4 blockers, 11 important,
+  8 cosmetic) and finding-003 (no CI is a publish blocker). The built state
+  meets part of the two gated steps: Cargo.toml carries the description,
+  repository, homepage, documentation, keywords and categories fields and an
+  exclude list, and `.github/workflows/ci.yml` runs Rustfmt, Clippy, tests on
+  Linux and macOS, and Cargo Deny. No workflow runs `cargo publish` and the
+  local clone has no tag, so whether the crate is published is not shown here;
+  crates.io was not checked. The statement above that forestage uses a path
+  dependency is out of date: see question-forestage-dep-source. No confidence
+  change.
+
 edges:
   - target: question-forestage-dep-source
     type: blocks
+  - target: finding-001-crates-publish-readiness
+    type: supports
+    note: "result confirms: publishable with metadata work"
+  - target: finding-002-crates-publish-review
+    type: supports
+    note: "pre-publish review: 4 blockers, 11 important, 8 cosmetic; the blockers were fixed in 1ea77ab and 904ebb5"
+  - target: finding-003-ci-quality-gate-gap
+    type: supports
+    note: "no CI was a publish blocker; the quality gate pipeline landed in 3b62b21"
 
 provenance:
   created_by: human+claude

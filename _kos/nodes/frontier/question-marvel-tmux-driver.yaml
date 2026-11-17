@@ -34,6 +34,15 @@ content: |
   complexity and C ABI boundary are not worth it when the use case can
   be served by a pure Go implementation or the existing subprocess driver.
 
+  Harvest 2026-11-17 (I-532): evidence only, no measurement. marvel at main
+  b7c1f891 still drives tmux by subprocess (`internal/tmux/driver.go:206`) and
+  reads pane liveness with `list-panes -F '#{pane_dead}...'` (`:691-692`); a
+  search of `internal/` for control-mode use (`-CC`, control mode, `%output`,
+  `PaneExited`) finds none. Continued use since April is a weak point toward the
+  case for keeping the subprocess driver, and no finding measures it. This node
+  is about marvel, so by the subject test it may belong in marvel's graph; that
+  is a relocation question and is not decided here. No confidence change.
+
 edges:
   - target: elem-sync-architecture
     type: related
