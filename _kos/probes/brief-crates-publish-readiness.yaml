@@ -53,3 +53,12 @@ brief:
   success_signal: "Produce a prioritized checklist (blocker/important/cosmetic) with specific file-level changes. No surprises in the security review."
   timebox: "1 session"
   predicted_confidence: 0.75
+  status: complete
+  outcome: |
+    Marked complete in the 2026-11-17 harvest (I-532), from the evidence below; closing
+    stays a human act.
+    The checklist the success signal asks for is finding-002-crates-publish-review,
+    and both finding-002 (result: partial) and finding-003-ci-quality-gate-gap
+    (result: redirects) name this brief in their probe fields. At tmux-cmc
+    e1a7620, B1 to B3 and B5 are fixed by 1ea77ab, B6 by 904ebb5 and 1ea77ab, and
+    B4 is fixed for the four option structs but not Response.

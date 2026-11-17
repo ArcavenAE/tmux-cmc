@@ -3,8 +3,17 @@ type: question
 confidence: frontier
 title: "Which platforms should be supported for a published crate? macOS + Linux, which tmux versions?"
 content: |
+  Harvest 2026-11-17 (I-532): this node had no body. The operating-system half
+  is answered by the built state at tmux-cmc e1a7620: `src/lib.rs:24` stops the
+  build with `compile_error!` on a non-unix target, `Cargo.toml` sets docs.rs
+  targets `x86_64-unknown-linux-gnu` and `aarch64-apple-darwin`, and CI tests
+  on ubuntu-latest and macos-latest. Which tmux versions are supported is not
+  addressed anywhere at this commit and stays open. No confidence change.
 
-edges: []
+edges:
+  - target: finding-002-crates-publish-review
+    type: supports
+    note: "blocker B6 asked for a stated platform policy; the OS half is built, the tmux version half is open"
 provenance:
   created_by: human
   session: null
