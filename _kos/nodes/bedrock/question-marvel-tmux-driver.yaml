@@ -1,6 +1,6 @@
 id: question-marvel-tmux-driver
 type: question
-confidence: frontier
+confidence: bedrock
 title: "Is marvel's subprocess tmux driver sufficient, or does Go need a control mode client?"
 content: |
   marvel (Go) manages agent sessions via tmux. Its current driver in
@@ -41,7 +41,9 @@ content: |
   `PaneExited`) finds none. Continued use since April is a weak point toward the
   case for keeping the subprocess driver, and no finding measures it. This node
   is about marvel, so by the subject test it may belong in marvel's graph; that
-  is a relocation question and is not decided here. No confidence change.
+  is a relocation question. Moved to bedrock 2026-11-18 (I-532 harvest;
+  operator ruling d1117b-1, option 1, 2026-11-17): the ruling chose this move, the weaker of the two proposed, over
+  relocating the node to marvel's graph first; no measurement backs it.
 
 edges:
   - target: elem-sync-architecture
