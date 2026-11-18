@@ -1,32 +1,27 @@
 id: question-forestage-dep-source
 type: question
 confidence: bedrock
-title: "Migrate forestage dependency from path to git/crates.io"
+title: "How does forestage depend on tmux-cmc: git on main (built), a pinned tag, or crates.io?"
 content: |
-  forestage currently depends on tmux-cmc via `path = "../tmux-cmc"`.
-  This works for the main checkout and worktrees (clone-for-worktree)
-  but creates a hard coupling: you must have both repos cloned at the
-  same relative path.
+  forestage declares its tmux-cmc dependency as `{ git =
+  "https://github.com/ArcavenAE/tmux-cmc", branch = "main" }` (Cargo.toml:32
+  at forestage develop 4716e685). It was switched from `path = "../tmux-cmc"`
+  in forestage f999be8 (2026-04-03, "switch tmux-cmc from path to git
+  dependency"), so forestage no longer needs tmux-cmc cloned alongside it.
 
-  Three options:
-  1. `{ git = "...", tag = "v0.1.0" }` — pinned git tag, no crates.io
-     publish required, but cargo.lock must be committed
-  2. `{ version = "0.1" }` — crates.io (requires publish)
-  3. Keep path for now — acceptable during co-development, switch after
-     tmux-cmc stabilises its API
+  Of the three options this question first listed, the first is built, with a
+  branch in place of a tag:
+  1. `{ git = "...", tag = "v0.1.0" }`: a pinned git tag, no crates.io publish
+     required, with Cargo.lock committed. Built as a git dependency on `main`;
+     pinning a tag is still open.
+  2. `{ version = "0.1" }`: crates.io, which requires a publish. Open.
+  3. Keep the path dependency: no longer the state.
 
-  The worktree clone pattern (`just clone-for-worktree tmux-cmc`) handles
-  the path case. This question becomes pressing when forestage wants to
-  distribute without requiring tmux-cmc to be cloned alongside it.
+  Still open: whether to pin a tag, or to move to crates.io after a publish.
 
-  Harvest 2026-11-17 (I-532): the first sentence above is out of date. forestage
-  at develop 4716e685 declares `tmux-cmc = { git =
-  "https://github.com/ArcavenAE/tmux-cmc", branch = "main" }` (Cargo.toml:32),
-  changed from the path dependency in forestage f999be8 (2026-04-03, "switch
-  tmux-cmc from path to git dependency"). That is option 1 above with a branch
-  in place of a tag. Whether to pin a tag, or to move to crates.io after a
-  publish, stays open in the text above. Moved to bedrock 2026-11-18 (I-532
-  harvest; operator ruling d1117b-1, option 1, 2026-11-17) as the ruled move for the built state described here.
+  Rewritten 2026-11-18 (I-532 harvest) to the built state above, and moved to
+  bedrock the same day under operator ruling d1117b-1, option 1, 2026-11-17
+  ("frontier to bedrock, rewritten").
 
 edges:
   - target: question-crates-publish
