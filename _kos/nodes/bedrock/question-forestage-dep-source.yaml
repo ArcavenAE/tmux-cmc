@@ -1,0 +1,33 @@
+id: question-forestage-dep-source
+type: question
+confidence: bedrock
+title: "How does forestage depend on tmux-cmc: git on main (built), a pinned tag, or crates.io?"
+content: |
+  forestage declares its tmux-cmc dependency as `{ git =
+  "https://github.com/ArcavenAE/tmux-cmc", branch = "main" }` (Cargo.toml:32
+  at forestage develop 4716e685). It was switched from `path = "../tmux-cmc"`
+  in forestage f999be8 (2026-04-03, "switch tmux-cmc from path to git
+  dependency"), so forestage no longer needs tmux-cmc cloned alongside it.
+
+  Of the three options this question first listed, the first is built, with a
+  branch in place of a tag:
+  1. `{ git = "...", tag = "v0.1.0" }`: a pinned git tag, no crates.io publish
+     required, with Cargo.lock committed. Built as a git dependency on `main`;
+     pinning a tag is still open.
+  2. `{ version = "0.1" }`: crates.io, which requires a publish. Open.
+  3. Keep the path dependency: no longer the state.
+
+  Still open: whether to pin a tag, or to move to crates.io after a publish.
+
+  Rewritten 2026-11-18 (I-532 harvest) to the built state above, and moved to
+  bedrock the same day under operator ruling d1117b-1, option 1, 2026-11-17
+  ("frontier to bedrock, rewritten").
+
+edges:
+  - target: question-crates-publish
+    type: depends-on
+
+provenance:
+  created_by: human+claude
+  session: session-009
+  created_at: "2026-04-02"
